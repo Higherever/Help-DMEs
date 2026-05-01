@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+sqlalchemy[asyncio]
+aiosqlite
+pydantic
+playwright
+playwright-stealth
+pytest
+pytest-asyncio
