@@ -88,14 +88,6 @@ def normalize_category(raw: str) -> str:
     }
     return mapping.get(raw, raw.lower())
 
-async def create_stealth_context(p):
-    """
-    Cria uma instância de browser e contexto com configurações de stealth.
-    """
-    browser = await p.chromium.launch(headless=True)
-    context = await browser.new_context(
-        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        viewport={"width": 1920, "height": 1080},
-    )
-    page = await context.new_page()
-    return browser, context, page
+
+# Nota: create_stealth_context removida na v0.4.0 — Playwright substituído por aiohttp.
+

@@ -41,7 +41,7 @@ export default function App() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    const refreshToast = toast.loading('Sincronizando fut.gg...');
+    const refreshToast = toast.loading('Sincronizando Futbin...');
     try {
       await api.post('/api/scrape/start', {});
       // Polling do status até finalizar

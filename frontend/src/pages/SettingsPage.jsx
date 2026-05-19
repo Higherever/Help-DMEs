@@ -84,7 +84,7 @@ export default function SettingsPage() {
   };
 
   const startSync = async () => {
-    const source = settings.find(s => s.key === 'default_source')?.value || 'fut.gg';
+    const source = settings.find(s => s.key === 'default_source')?.value || 'futbin';
     setIsSyncing(true);
     try {
       await api.post(`/api/scrape/start?source=${source}`, {});
@@ -169,7 +169,7 @@ export default function SettingsPage() {
               </div>
             </div>
             <select 
-              value={settings.find(s => s.key === 'default_source')?.value || 'fut.gg'}
+              value={settings.find(s => s.key === 'default_source')?.value || 'futbin'}
               onChange={(e) => handleSourceChange(e.target.value)}
               style={{
                 background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
@@ -177,8 +177,7 @@ export default function SettingsPage() {
                 padding: '8px 12px', cursor: 'pointer', outline: 'none'
               }}
             >
-              <option value="fut.gg">Fut.gg (Recomendado)</option>
-              <option value="futnext">FutNext (Fallback)</option>
+              <option value="futbin">Futbin (Recomendado)</option>
             </select>
           </div>
         </div>

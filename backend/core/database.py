@@ -26,7 +26,7 @@ DATABASE_URL = f"sqlite+aiosqlite:///{DATABASE_FILE}"
 # Engine Async
 engine = create_async_engine(
     DATABASE_URL, echo=False,
-    connect_args={"check_same_thread": False},
+    connect_args={"check_same_thread": False, "timeout": 30},
 )
 
 # Session Factory

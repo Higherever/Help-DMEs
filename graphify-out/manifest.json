@@ -1,0 +1,306 @@
+{
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/main.py": {
+    "mtime": 1777694462.5170078,
+    "hash": "1c28988ee0392104860c1db9894f59c1"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/__init__.py": {
+    "mtime": 1777512575.3599632,
+    "hash": "e4801eeeda841e03e6dcb5f31d672f48"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/core/__init__.py": {
+    "mtime": 1777403454.8874495,
+    "hash": "3232458e9fc162a15f8fbaa5c4a794a1"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/core/database.py": {
+    "mtime": 1777692256.7139826,
+    "hash": "868d005cb8de7ea3c492d84259d5f5c5"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/core/seed.py": {
+    "mtime": 1777505334.442888,
+    "hash": "c8d9bcdbfd9e320d73fa718994a9ffa9"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/core/logging_config.py": {
+    "mtime": 1777505038.0658293,
+    "hash": "82d759470f1a41d2a4b44f502adb631a"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/services/fut_gg_service.py": {
+    "mtime": 1777761861.4492424,
+    "hash": "3b9c3df0f2bd2ee07b38beae43ba18a5"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/services/__init__.py": {
+    "mtime": 1777404440.554651,
+    "hash": "02b400544068ea3869fe552e3774dc8f"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/services/settings_service.py": {
+    "mtime": 1777404494.693299,
+    "hash": "49a7ac6cba277bc5cb84d42d79198fb1"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/services/squad_service.py": {
+    "mtime": 1777596327.71609,
+    "hash": "0053b6f588770652d87226f981c48d51"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/services/calculator_service.py": {
+    "mtime": 1777506248.7905083,
+    "hash": "0f15b2ae0475eaf5d550214999ce8fa1"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/services/scraping_utils.py": {
+    "mtime": 1777593851.3258746,
+    "hash": "f841bc04dbdf972c85cb847695054a86"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/services/futnext_service.py": {
+    "mtime": 1777599372.659643,
+    "hash": "86470332041e4de1adde528d1fd0186b"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/models/__init__.py": {
+    "mtime": 1777403456.891497,
+    "hash": "933c4e2033ce60de784fe5395216e744"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/models/models.py": {
+    "mtime": 1777693492.6694765,
+    "hash": "1fc7c48838345f036890507a90a3062f"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/schemas/__init__.py": {
+    "mtime": 1777404438.5505893,
+    "hash": "132807470bacc602d1aa28e1ca30461b"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/schemas/schemas.py": {
+    "mtime": 1777693500.4626715,
+    "hash": "d38152eb22b550b72c2d4d046d98248d"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/tests/__init__.py": {
+    "mtime": 1777506922.0951357,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/tests/conftest.py": {
+    "mtime": 1777506926.9682944,
+    "hash": "58da686f629cca89fb36386c12664b59"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/tests/test_settings_service.py": {
+    "mtime": 1777506968.4776323,
+    "hash": "1c5d4c878cae5df773fd4a25065f8a60"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/tests/test_squad_service.py": {
+    "mtime": 1777507093.0665288,
+    "hash": "598b839d1f0417bb5eff269fffacaec8"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/tests/test_calculator_service.py": {
+    "mtime": 1777507324.0063846,
+    "hash": "01761e5b8742913249191104d8e7cc1f"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/tests/test_scraping_utils.py": {
+    "mtime": 1777595648.4514136,
+    "hash": "c2de0cc2526e33f3c33b87c6cc013701"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/scripts/migrate_v2.py": {
+    "mtime": 1777693510.5919251,
+    "hash": "93b3ced05df3aad2cb763aee160ff533"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/scripts/test_scraper_v2.py": {
+    "mtime": 1777693969.1646972,
+    "hash": "c17eb296b8a4d789e50d7ae9da676639"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/eslint.config.js": {
+    "mtime": 1777401494.1330564,
+    "hash": "3aa4b57d7f08181d86bde52a4dcb7f22"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/vite.config.js": {
+    "mtime": 1777401494.1339447,
+    "hash": "88439104b3c207f17d33ef3160e3b080"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/src/App.jsx": {
+    "mtime": 1777599226.2346659,
+    "hash": "51b393581281d24a6e87670910a28c79"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/src/main.jsx": {
+    "mtime": 1777401494.1338637,
+    "hash": "e13723e2574429d9a6d849727e3ff695"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/src/components/Layout/Sidebar.jsx": {
+    "mtime": 1777597741.8731275,
+    "hash": "aecadb6705e650d96b99f028678816d8"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/src/components/Layout/Header.jsx": {
+    "mtime": 1777597727.4617329,
+    "hash": "0276cbdb14d0469c2f727e4304a35a0b"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/src/components/Layout/Layout.jsx": {
+    "mtime": 1777597750.255357,
+    "hash": "1cb22a9048ee758d032497409f5179e5"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/src/components/Landing/LandingPage.jsx": {
+    "mtime": 1777596663.830633,
+    "hash": "e0bd34e78a8d8128c9817006bd6b208e"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/src/components/Dashboard/Dashboard.jsx": {
+    "mtime": 1777596709.4609997,
+    "hash": "149f7bad5c20f6ea67d70f42a284afef"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/src/components/Squad/SquadPage.jsx": {
+    "mtime": 1777596711.4670596,
+    "hash": "684a491cfd2cd363f54a8b5d3ca509cc"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/src/hooks/useApi.js": {
+    "mtime": 1777596647.1151292,
+    "hash": "ae27f7da0bbd84b2f653358a31b79dc8"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/src/pages/SbcsPage.jsx": {
+    "mtime": 1777756057.0792239,
+    "hash": "c963ce515a7f57090e15e2edf0177379"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/src/pages/SettingsPage.jsx": {
+    "mtime": 1777597464.6935058,
+    "hash": "8508e97682f05486299e2ac893ef647b"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/src/pages/CalculatorPage.jsx": {
+    "mtime": 1777756099.6973376,
+    "hash": "aa0a6baf18767a760fd6e01bee070a2f"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/vite.config.ts": {
+    "mtime": 1777846589.2518003,
+    "hash": "c351708ef969bddc79565ec9f246e2c6"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/backend/logger.py": {
+    "mtime": 1777846589.2495756,
+    "hash": "14bf73c1abb1b1e020fc653e53e646a2"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/backend/main.py": {
+    "mtime": 1777846589.2496464,
+    "hash": "1ffcf2d5c232990d724916b5ac73d9a0"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/backend/runner.py": {
+    "mtime": 1777846589.2496464,
+    "hash": "eeef17fbe7f44a8e5f5603d01df07bd6"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/electron/main.js": {
+    "mtime": 1777846589.2507434,
+    "hash": "09d21b3c69aa50542464194032469406"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/electron/preload.js": {
+    "mtime": 1777846589.2508402,
+    "hash": "f1494829e8b11adb5a5ee546c80d0926"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/src/App.tsx": {
+    "mtime": 1777846589.251384,
+    "hash": "353f316b9e377781147caa33d4008e6b"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/src/electron.d.ts": {
+    "mtime": 1777846589.2514868,
+    "hash": "2b38adf44400e098396b9ded4288bd4f"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/src/main.tsx": {
+    "mtime": 1777846589.2518003,
+    "hash": "7239ee95c787d89f9c5dc9e6f92c11fd"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/src/vite-env.d.ts": {
+    "mtime": 1777846589.2518003,
+    "hash": "0352474ba2918efe13895edbc3780d94"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/src/components/Loading26.tsx": {
+    "mtime": 1777846589.2514408,
+    "hash": "6fa6efc1ce8f917e2ba16f1bb62352a8"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/src/components/Options.tsx": {
+    "mtime": 1777846589.2514868,
+    "hash": "39412bde21bec8c12fc92dac135712c7"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/src/components/PackageList.tsx": {
+    "mtime": 1777846589.2514868,
+    "hash": "01d3c8b15079dbfa5a3eb8969a6c07e8"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/src/components/Progress.tsx": {
+    "mtime": 1777846589.2514868,
+    "hash": "ef3de68a85097fc7f45f39bf09ffda03"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/src/components/ProgressHeader.tsx": {
+    "mtime": 1777846589.2514868,
+    "hash": "27649746512fe7cb23cae86134f5068d"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/src/components/TitleBar.tsx": {
+    "mtime": 1777846589.2514868,
+    "hash": "7068d31c3f8f4a4da24b9ada77aecf2f"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/src/components/Welcome.tsx": {
+    "mtime": 1777846589.2514868,
+    "hash": "ce0c89c9d2c835eedccb18f9fcf9e850"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/src/hooks/useTimer.ts": {
+    "mtime": 1777846589.2514868,
+    "hash": "7793cef4c3a1e75e2060300f8918d1bc"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/src/hooks/useWebSocket.ts": {
+    "mtime": 1777846589.2518003,
+    "hash": "864ce0fd9cb5199f1c26af3ac05e7db8"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/README.md": {
+    "mtime": 1777400610.126084,
+    "hash": "2a21594974f0832249761f2d62cdd2d2"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/requirements.txt": {
+    "mtime": 1777512653.604151,
+    "hash": "ddbf11b2aa2a0599f345fe532bcb14c8"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/README.md": {
+    "mtime": 1777401494.1328454,
+    "hash": "a28dc4cb878325f3e9e5649f3e1469ac"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/index.html": {
+    "mtime": 1777401494.1330564,
+    "hash": "89150e536c4a99f73625f46f41f0f437"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/CHANGELOG.md": {
+    "mtime": 1777846589.2494655,
+    "hash": "f2994d8e69c3dfeba3e7d67606ce9b0c"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/README.md": {
+    "mtime": 1777846589.2494655,
+    "hash": "005739205f0f628af7d65e0e1c9630ff"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/index.html": {
+    "mtime": 1777846589.2508402,
+    "hash": "f0f2fd0831cb7c19fbaed78082950565"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/backend/requirements.txt": {
+    "mtime": 1777846589.2496464,
+    "hash": "053913b28dbd873803d11154098bdf7f"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/public/favicon.svg": {
+    "mtime": 1777401494.1333044,
+    "hash": "7e840862161341271697daa99a40d76b"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/public/icons.svg": {
+    "mtime": 1777401494.1333463,
+    "hash": "3b4fcfcf393eca4d264dca4a4663bc37"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/public/images/heroes/hero_1.png": {
+    "mtime": 1777405981.4591935,
+    "hash": "01d1c92ed6f2ff8b109d6464ce3cfc22"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/public/images/heroes/hero_2.png": {
+    "mtime": 1777405981.4601934,
+    "hash": "f24a38b177a9d991e5877f673c9fc128"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/public/images/heroes/hero_3.png": {
+    "mtime": 1777405981.4611936,
+    "hash": "a6de2f6617ba6573068bcc2bcced3cdb"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/public/images/heroes/hero_4.png": {
+    "mtime": 1777405981.4611936,
+    "hash": "1625152eefb3911ec16ed868f09ac4b6"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/src/assets/hero.png": {
+    "mtime": 1777401494.1336374,
+    "hash": "aead493361b27e7510691c5d7072dfc1"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/src/assets/react.svg": {
+    "mtime": 1777401494.1336815,
+    "hash": "f0402b67b6ce880f65666bb49e841696"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/src/assets/vite.svg": {
+    "mtime": 1777401494.1337469,
+    "hash": "9960a24288958394ac50e57ff638b036"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/public/videos/loading.mp4": {
+    "mtime": 1777846589.2511396,
+    "hash": "1d1c556ee00099cd2e5b354d31987665"
+  }
+}

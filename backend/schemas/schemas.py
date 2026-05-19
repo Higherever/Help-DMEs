@@ -73,11 +73,14 @@ class SBCSetResponse(BaseModel):
     total_cost: Optional[int] = None
     challenges_count: int = 0
     expires_at: Optional[datetime] = None
+    expires_text: Optional[str] = None
     is_repeatable: bool = False
+    repeatable_text: Optional[str] = None
+    refresh_text: Optional[str] = None
     image_url: Optional[str] = None
     completion_pct: Optional[float] = None
     is_new: bool = False
-    source: str = "fut.gg"
+    source: str = "futbin"
     scraped_at: Optional[datetime] = None
 
 

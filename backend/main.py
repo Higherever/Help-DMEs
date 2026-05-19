@@ -34,10 +34,10 @@ from backend.schemas.schemas import (
 )
 
 from backend.services import settings_service, squad_service
-from backend.services.fut_gg_service import get_scrape_status, scrape_all_sbcs
+from backend.services.futbin_service import get_scrape_status, scrape_all_sbcs
 
 
-APP_VERSION = "0.3.0"
+APP_VERSION = "0.4.0"
 
 
 # ──────────────────────────────────────────────
@@ -69,6 +69,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Servir imagens locais baixadas pelo scraper
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+
+_images_dir = Path("images")
+_images_dir.mkdir(exist_ok=True)
+app.mount("/images", StaticFiles(directory=str(_images_dir)), name="images")
 
 
 # ══════════════════════════════════════════════
@@ -225,17 +233,7 @@ async def list_sbcs(
     result = await session.execute(query)
     sbcs = result.scalars().all()
 
-    return [
-        SBCSetResponse(
-            id=s.id, futgg_id=s.futgg_id, name=s.name,
-            description=s.description, category=s.category,
-            total_cost=s.total_cost, challenges_count=s.challenges_count,
-            expires_at=s.expires_at, is_repeatable=s.is_repeatable,
-            image_url=s.image_url, completion_pct=s.completion_pct,
-            is_new=s.is_new, source=s.source, scraped_at=s.scraped_at,
-        )
-        for s in sbcs
-    ]
+    return [_sbc_to_response(s) for s in sbcs]
 
 
 @app.get("/api/sbcs/{sbc_id}", response_model=SBCSetDetailResponse)
@@ -271,25 +269,22 @@ async def get_sbc_detail(
 
 @app.post("/api/scrape/start", response_model=ScrapeStartResponse)
 async def start_scraping(
-    source: str = Query("fut.gg", description="Fonte de scraping: fut.gg ou futnext"),
+    source: str = Query("futbin", description="Fonte de scraping: futbin"),
     session: AsyncSession = Depends(get_session_dependency),
 ):
-    """Inicia o scraping em background. Fonte: fut.gg (padrão) ou futnext."""
+    """Inicia o scraping em background via Futbin."""
     status = get_scrape_status()
     if status["status"] == "running":
         return ScrapeStartResponse(status="running", message="Scraping já em andamento.")
 
-    if source == "futnext":
-        asyncio.create_task(_run_futnext_background())
-        return ScrapeStartResponse(status="started", message="Scraping FutNext iniciado em background.")
-    
     asyncio.create_task(_run_scraping_background())
-    return ScrapeStartResponse(status="started", message="Scraping Fut.gg iniciado em background.")
+    return ScrapeStartResponse(status="started", message="Scraping Futbin iniciado em background.")
 
 
 @app.get("/api/scrape/status", response_model=ScrapeStatusResponse)
 async def scrape_status(session: AsyncSession = Depends(get_session_dependency)):
     """Status atual do scraping."""
+    from backend.services.futbin_service import get_scrape_status
     status = get_scrape_status()
 
     # Contar SBCs no banco se o status não tiver contagem
@@ -329,8 +324,7 @@ async def scrape_logs(
 async def list_scrape_sources():
     """Lista as fontes de scraping disponíveis."""
     return [
-        {"id": "fut.gg", "name": "Fut.gg", "is_primary": True},
-        {"id": "futnext", "name": "FutNext", "is_primary": False}
+        {"id": "futbin", "name": "Futbin", "is_primary": True},
     ]
 
 
@@ -389,6 +383,20 @@ def _player_to_response(player) -> UserSquadPlayerResponse:
     )
 
 
+def _sbc_to_response(s: SBCSet) -> SBCSetResponse:
+    """Converte SBCSet ORM → schema Pydantic resumido."""
+    return SBCSetResponse(
+        id=s.id, futgg_id=s.futgg_id, name=s.name,
+        description=s.description, category=s.category,
+        total_cost=s.total_cost, challenges_count=s.challenges_count,
+        expires_at=s.expires_at, expires_text=s.expires_text,
+        is_repeatable=s.is_repeatable, repeatable_text=s.repeatable_text,
+        refresh_text=s.refresh_text,
+        image_url=s.image_url, completion_pct=s.completion_pct,
+        is_new=s.is_new, source=s.source, scraped_at=s.scraped_at,
+    )
+
+
 def _sbc_to_detail_response(sbc) -> SBCSetDetailResponse:
     """Converte SBCSet ORM → schema Pydantic detalhado."""
     from backend.schemas.schemas import (
@@ -435,34 +443,23 @@ def _sbc_to_detail_response(sbc) -> SBCSetDetailResponse:
             meta_rating=pc.meta_rating, card_image_url=pc.card_image_url,
         )
 
+    # Reutiliza o mapeador base para campos comuns
+    base = _sbc_to_response(sbc)
+    
     return SBCSetDetailResponse(
-        id=sbc.id, futgg_id=sbc.futgg_id, name=sbc.name,
-        description=sbc.description, category=sbc.category,
-        total_cost=sbc.total_cost, challenges_count=sbc.challenges_count,
-        expires_at=sbc.expires_at, is_repeatable=sbc.is_repeatable,
-        image_url=sbc.image_url, completion_pct=sbc.completion_pct,
-        is_new=sbc.is_new, source=sbc.source, scraped_at=sbc.scraped_at,
+        **base.model_dump(),
         challenges=challenges, rewards=set_rewards, player_card=player_card,
     )
 
 
 async def _run_scraping_background():
-    """Executa scraping em background com fallback."""
+    """Executa scraping Futbin em background."""
     import logging
     logger = logging.getLogger("help_dmes.main")
-    
+
     from backend.core.database import get_session
+    from backend.services.futbin_service import scrape_all_sbcs
+
     async with get_session() as session:
         result = await scrape_all_sbcs(session)
-        if result["status"] == "failed":
-            logger.warning("Fut.gg falhou, tentando FutNext como fallback...")
-            from backend.services.futnext_service import scrape_all_sbcs_futnext
-            await scrape_all_sbcs_futnext(session)
-
-
-async def _run_futnext_background():
-    """Executa scraping FutNext em background."""
-    from backend.core.database import get_session
-    from backend.services.futnext_service import scrape_all_sbcs_futnext
-    async with get_session() as session:
-        await scrape_all_sbcs_futnext(session)
+        logger.info(f"Scraping finalizado: {result}")

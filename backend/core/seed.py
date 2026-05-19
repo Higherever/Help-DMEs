@@ -71,7 +71,7 @@ DEFAULT_SETTINGS = [
     },
     {
         "key": "default_source",
-        "value": "fut.gg",
+        "value": "futbin",
         "description": "Fonte primária de scraping de SBCs.",
     },
     {

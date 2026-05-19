@@ -3,7 +3,11 @@ uvicorn[standard]
 sqlalchemy[asyncio]
 aiosqlite
 pydantic
-playwright
-playwright-stealth
+aiohttp
+aiofiles
+beautifulsoup4
+lxml
+tqdm
+Brotli
 pytest
 pytest-asyncio
