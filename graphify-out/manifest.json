@@ -1,7 +1,35 @@
 {
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/test_aiohttp.py": {
+    "mtime": 1779224811.7680295,
+    "hash": "f77cf2941d9a1d3c97c033e344770d0c"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/test_httpx.py": {
+    "mtime": 1779224846.8976872,
+    "hash": "bc382d91ba6f038e7ecd188f448556a0"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/test_cffi.py": {
+    "mtime": 1779224858.557691,
+    "hash": "b38f1f1d656bb54a15c3d6ef0ab11f80"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/test_parse.py": {
+    "mtime": 1779227135.9978573,
+    "hash": "293acd0c85ba3e6028dbdf1b22a45d78"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/test_aio_html.py": {
+    "mtime": 1779224894.4856725,
+    "hash": "f6781f374ca80185416c73936140ac2d"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/test_html.py": {
+    "mtime": 1779225466.275397,
+    "hash": "66db80292b91bc3f6183a4106e1e470f"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/test_parse_expire.py": {
+    "mtime": 1779225556.5912952,
+    "hash": "04797fe6f1577b67e19a38f6c50fcc9f"
+  },
   "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/main.py": {
-    "mtime": 1777694462.5170078,
-    "hash": "1c28988ee0392104860c1db9894f59c1"
+    "mtime": 1779221913.8620806,
+    "hash": "89c1d80eaeeb17e9800ef5f43c3386ec"
   },
   "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/__init__.py": {
     "mtime": 1777512575.3599632,
@@ -16,16 +44,12 @@
     "hash": "868d005cb8de7ea3c492d84259d5f5c5"
   },
   "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/core/seed.py": {
-    "mtime": 1777505334.442888,
-    "hash": "c8d9bcdbfd9e320d73fa718994a9ffa9"
+    "mtime": 1779223379.0841424,
+    "hash": "8c4f9fc2cf960c4ccd5bf617f1b92d3f"
   },
   "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/core/logging_config.py": {
     "mtime": 1777505038.0658293,
     "hash": "82d759470f1a41d2a4b44f502adb631a"
-  },
-  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/services/fut_gg_service.py": {
-    "mtime": 1777761861.4492424,
-    "hash": "3b9c3df0f2bd2ee07b38beae43ba18a5"
   },
   "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/services/__init__.py": {
     "mtime": 1777404440.554651,
@@ -44,12 +68,12 @@
     "hash": "0f15b2ae0475eaf5d550214999ce8fa1"
   },
   "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/services/scraping_utils.py": {
-    "mtime": 1777593851.3258746,
-    "hash": "f841bc04dbdf972c85cb847695054a86"
+    "mtime": 1779221962.3215048,
+    "hash": "c7b575773a8fac69562e5f0186447760"
   },
-  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/services/futnext_service.py": {
-    "mtime": 1777599372.659643,
-    "hash": "86470332041e4de1adde528d1fd0186b"
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/services/futbin_service.py": {
+    "mtime": 1779225602.9638119,
+    "hash": "01a8d437deb69d4b5dbfd133ae847f31"
   },
   "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/models/__init__.py": {
     "mtime": 1777403456.891497,
@@ -64,8 +88,8 @@
     "hash": "132807470bacc602d1aa28e1ca30461b"
   },
   "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/schemas/schemas.py": {
-    "mtime": 1777693500.4626715,
-    "hash": "d38152eb22b550b72c2d4d046d98248d"
+    "mtime": 1779223386.905426,
+    "hash": "6aaf503fc4ff82a9e67c1e34fea6a79a"
   },
   "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/tests/__init__.py": {
     "mtime": 1777506922.0951357,
@@ -108,8 +132,8 @@
     "hash": "88439104b3c207f17d33ef3160e3b080"
   },
   "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/src/App.jsx": {
-    "mtime": 1777599226.2346659,
-    "hash": "51b393581281d24a6e87670910a28c79"
+    "mtime": 1779223306.832526,
+    "hash": "d3a2a9dc766e1f71d99c7b6b57c084c6"
   },
   "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/src/main.jsx": {
     "mtime": 1777401494.1338637,
@@ -144,16 +168,16 @@
     "hash": "ae27f7da0bbd84b2f653358a31b79dc8"
   },
   "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/src/pages/SbcsPage.jsx": {
-    "mtime": 1777756057.0792239,
-    "hash": "c963ce515a7f57090e15e2edf0177379"
+    "mtime": 1779226853.5777707,
+    "hash": "d0e450346172919ce8dc7e2d8a9d06c6"
   },
   "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/src/pages/SettingsPage.jsx": {
-    "mtime": 1777597464.6935058,
-    "hash": "8508e97682f05486299e2ac893ef647b"
+    "mtime": 1779223339.213698,
+    "hash": "c0a2d1c5ad605585989f2d44627688b2"
   },
   "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/src/pages/CalculatorPage.jsx": {
-    "mtime": 1777756099.6973376,
-    "hash": "aa0a6baf18767a760fd6e01bee070a2f"
+    "mtime": 1779226621.1802952,
+    "hash": "30922f0e3147418e8421128b4d5b4aca"
   },
   "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/vite.config.ts": {
     "mtime": 1777846589.2518003,
@@ -235,9 +259,17 @@
     "mtime": 1777400610.126084,
     "hash": "2a21594974f0832249761f2d62cdd2d2"
   },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/sbc_list.html": {
+    "mtime": 1779225466.5754068,
+    "hash": "9f8fb68dc69041f369695ce7368a1bec"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/sbc_detail.html": {
+    "mtime": 1779227029.617359,
+    "hash": "8599fb0c139c568794a15919941ef244"
+  },
   "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/backend/requirements.txt": {
-    "mtime": 1777512653.604151,
-    "hash": "ddbf11b2aa2a0599f345fe532bcb14c8"
+    "mtime": 1779222390.2511868,
+    "hash": "079658dadeeeb90630b2f82470a28f71"
   },
   "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/README.md": {
     "mtime": 1777401494.1328454,
@@ -298,6 +330,210 @@
   "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/frontend/src/assets/vite.svg": {
     "mtime": 1777401494.1337469,
     "hash": "9960a24288958394ac50e57ff638b036"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_964.png": {
+    "mtime": 1779225638.0772533,
+    "hash": "add81db80c8b3aeb8f990b9f3962fae1"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_974.png": {
+    "mtime": 1779225638.9004931,
+    "hash": "db1a8a5e6bcd87e8bfd37a0a178f0db6"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_973.png": {
+    "mtime": 1779225639.9187782,
+    "hash": "36592ea53f427a3bd5b38c2a79801a2e"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_972.png": {
+    "mtime": 1779225640.8092892,
+    "hash": "553d312f1e6cd95c7bf72d5716994ee8"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_971.png": {
+    "mtime": 1779225641.7188675,
+    "hash": "2ffa59bc13453405e64b03306a0e5897"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_954.png": {
+    "mtime": 1779225642.5567014,
+    "hash": "04b66afb36e06e7fafe6386e9f9bcb46"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_932.png": {
+    "mtime": 1779225643.3806567,
+    "hash": "d4dcec2b73f3aba4900354d5d8019a10"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_933.png": {
+    "mtime": 1779225644.2080789,
+    "hash": "d3631be059e3672f0376670e10cf3a0e"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_970.png": {
+    "mtime": 1779225645.0183454,
+    "hash": "d544f3e27f1e5457f402490bc36aeea3"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_969.png": {
+    "mtime": 1779225645.831805,
+    "hash": "e28940438833b52999b5251c76f38ce1"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_962.png": {
+    "mtime": 1779225646.7263682,
+    "hash": "6033fd754e2a4fb3aa82f88427804b7a"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_960.png": {
+    "mtime": 1779225647.5493793,
+    "hash": "7e590a35d539e0034ef5a5d04c46c1b2"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_951.png": {
+    "mtime": 1779225648.4387467,
+    "hash": "616eab9025817ba7d6e0c6b686bb078e"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_953.png": {
+    "mtime": 1779225649.2514749,
+    "hash": "4c241575472e12d07f5d40500cd0650e"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_948.png": {
+    "mtime": 1779225650.0815246,
+    "hash": "b2077894ac28c7d4e1056a676032cb61"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_968.png": {
+    "mtime": 1779225654.428722,
+    "hash": "0e441fdbad25374a0512d2bf4f9a22c3"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_963.png": {
+    "mtime": 1779225655.5201242,
+    "hash": "528c1dfa4be8a643f2f70094c81d5bdc"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_946.png": {
+    "mtime": 1779225656.3654993,
+    "hash": "06bce917cc18737dca1db7760514d3d3"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_961.png": {
+    "mtime": 1779225657.3066752,
+    "hash": "d2714293d35e06e2bcbd827598e84fc4"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_943.png": {
+    "mtime": 1779225658.1274388,
+    "hash": "547d5d0d569e600f98e0b98c7d017d1e"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_947.png": {
+    "mtime": 1779225658.9722946,
+    "hash": "5d10647b5373e9f411ba67f4e83d9e75"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_949.png": {
+    "mtime": 1779225659.851455,
+    "hash": "69145d66ab8ce8de8c450f4729d962ee"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_940.png": {
+    "mtime": 1779225660.6759248,
+    "hash": "4def95cdc6f13634b26d4c0116075e06"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_917.png": {
+    "mtime": 1779225661.5978277,
+    "hash": "29a2d4d656cf42b18af0ecbc3f15f0fb"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_936.png": {
+    "mtime": 1779225662.457436,
+    "hash": "08c196981189f9c10213d7ced9737e8f"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_937.png": {
+    "mtime": 1779225663.3104587,
+    "hash": "dee7c95a27aacf68b6ba1b2de45bca9f"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_938.png": {
+    "mtime": 1779225664.1670995,
+    "hash": "4022d1f119c3df325c9e95d4adb2a50c"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_939.png": {
+    "mtime": 1779225665.0562916,
+    "hash": "53ea3ffacd00f373a03ed6701f3ae54d"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_944.png": {
+    "mtime": 1779225665.925375,
+    "hash": "0dd8e3aa126064a50e71b0acc2f63280"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_911.png": {
+    "mtime": 1779225666.824578,
+    "hash": "133a6789f952e357171c9266c8f69ca0"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_942.png": {
+    "mtime": 1779225667.6308062,
+    "hash": "b982593b9d836bb1c94049881d189df9"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_921.png": {
+    "mtime": 1779225668.6432917,
+    "hash": "a5cfc58351da07252f253784c98a3dec"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_912.png": {
+    "mtime": 1779225669.5450935,
+    "hash": "6d18f6f2746f358cd51e95fad6e7eb6c"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_930.png": {
+    "mtime": 1779225670.400695,
+    "hash": "1a9ff51d298828982ebc1d0873d3b7f0"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_915.png": {
+    "mtime": 1779225671.2620988,
+    "hash": "ff5ed426b853e621403b796d159d86e5"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_913.png": {
+    "mtime": 1779225672.1663258,
+    "hash": "4d61ec7c5a4757efa09c5bab2f61b3ea"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_897.png": {
+    "mtime": 1779225672.9910553,
+    "hash": "a5e2270dc6ebb4f4a5538bff9516aa89"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_880.png": {
+    "mtime": 1779225673.8687446,
+    "hash": "74afe2b2fa5723ccd7c4744f176fd4fe"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_838.png": {
+    "mtime": 1779225674.7264524,
+    "hash": "335504ef7777f036d509d0b30ff97547"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_814.png": {
+    "mtime": 1779225675.6026397,
+    "hash": "d0d678eab8a2b90cfbdee7f403641b4b"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_795.png": {
+    "mtime": 1779225676.4713724,
+    "hash": "a3560b21d1de4dff96e54e0a479db7f7"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_746.png": {
+    "mtime": 1779225677.316794,
+    "hash": "b92912c750bf8e859f08fb770e9c6ad2"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_638.png": {
+    "mtime": 1779225678.168484,
+    "hash": "58e90b2e73339e80e581af5ea7cb7352"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_639.png": {
+    "mtime": 1779225679.020607,
+    "hash": "3ce453ab82c65e23d333c3c75ae0fbe5"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_7.png": {
+    "mtime": 1779225679.8536618,
+    "hash": "fc6d5a2444027cf453c6da48cc2c2567"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_5.png": {
+    "mtime": 1779225680.7398434,
+    "hash": "02867330d101d263d71b440071e73f7b"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_6.png": {
+    "mtime": 1779225681.611856,
+    "hash": "07f22b526bfff363e36ce50a0d6cb0c7"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_3.png": {
+    "mtime": 1779225682.449348,
+    "hash": "fd45a14ed27bbc48f20c87be23d617a1"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_4.png": {
+    "mtime": 1779225683.299729,
+    "hash": "8202b23f3c9c564727c36c719bb2ff20"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_2.png": {
+    "mtime": 1779225684.1888995,
+    "hash": "aa0487e0676248bbd68e29ecc3140b2c"
+  },
+  "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/images/sbcs/sbc_1.png": {
+    "mtime": 1779225685.036906,
+    "hash": "82338f896007849f172ecdcd957809bc"
   },
   "/home/gambeta/Documentos/Socorro DMEs/Socorro DMEs/Prote-o/app/public/videos/loading.mp4": {
     "mtime": 1777846589.2511396,

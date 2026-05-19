@@ -697,3 +697,148 @@ body {
   }
 }
 
+
+/* ──────────────────────────────────────────────
+   Futbin Player Card – Réplica fiel EA FC
+   ────────────────────────────────────────────── */
+
+.futbin-card {
+  position: relative;
+  width: 100px;
+  height: 140px;
+  flex-shrink: 0;
+  overflow: hidden;
+  user-select: none;
+  transition: transform 0.2s var(--ease-out);
+}
+
+.futbin-card:hover {
+  transform: scale(1.06);
+}
+
+/* Fundo da carta (imagem completa do template) */
+.futbin-card-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Face do jogador */
+.futbin-card-face {
+  position: absolute;
+  top: 12%;
+  left: 50%;
+  transform: translateX(-42%);
+  width: 62%;
+  height: auto;
+  object-fit: contain;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Bloco de Rating + Position (canto superior esquerdo) */
+.futbin-card-info {
+  position: absolute;
+  top: 16%;
+  left: 14%;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.futbin-card-rating {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+.futbin-card-position {
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 1px;
+}
+
+/* Nome do jogador */
+.futbin-card-name {
+  position: absolute;
+  bottom: 26%;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 0.52rem;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+  text-transform: uppercase;
+  z-index: 3;
+  letter-spacing: 0.8px;
+  padding: 0 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Linha divisória sutil antes dos stats */
+.futbin-card-divider {
+  position: absolute;
+  bottom: 24%;
+  left: 20%;
+  right: 20%;
+  height: 1px;
+  background: rgba(255,255,255,0.25);
+  z-index: 3;
+}
+
+/* Container dos 6 stats */
+.futbin-card-stats {
+  position: absolute;
+  bottom: 5%;
+  left: 10%;
+  right: 10%;
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.futbin-card-stats-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+}
+
+.futbin-card-stat {
+  display: flex;
+  gap: 2px;
+  align-items: baseline;
+  line-height: 1.3;
+}
+
+.futbin-card-stat .stat-val {
+  font-size: 0.52rem;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  min-width: 14px;
+  text-align: right;
+}
+
+.futbin-card-stat .stat-lbl {
+  font-size: 0.45rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+}
+

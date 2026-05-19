@@ -391,7 +391,7 @@ def _sbc_to_response(s: SBCSet) -> SBCSetResponse:
         total_cost=s.total_cost, challenges_count=s.challenges_count,
         expires_at=s.expires_at, expires_text=s.expires_text,
         is_repeatable=s.is_repeatable, repeatable_text=s.repeatable_text,
-        refresh_text=s.refresh_text,
+        refresh_text=s.refresh_text, raw_card_data=s.raw_card_data,
         image_url=s.image_url, completion_pct=s.completion_pct,
         is_new=s.is_new, source=s.source, scraped_at=s.scraped_at,
     )

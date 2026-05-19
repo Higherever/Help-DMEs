@@ -82,6 +82,7 @@ class SBCSetResponse(BaseModel):
     is_new: bool = False
     source: str = "futbin"
     scraped_at: Optional[datetime] = None
+    raw_card_data: Optional[str] = None
 
 
 class SBCSetDetailResponse(SBCSetResponse):

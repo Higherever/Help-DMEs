@@ -18,6 +18,7 @@ import os
 from datetime import datetime, UTC
 from pathlib import Path
 from typing import Optional
+import json
 
 import aiohttp
 import aiofiles
@@ -191,12 +192,53 @@ def _parse_sbc_list(html: str) -> list[dict]:
             if expires_div:
                 expires_text = expires_div.get_text(strip=True)
 
+        # Dados brutos da carta (raw_card_data) se houver
+        raw_card_data_str = None
+        player_card_el = card.select_one(".playercard-26")
+        if player_card_el:
+            card_info = {}
+            bg_el = player_card_el.select_one(".playercard-26-bg")
+            if bg_el:
+                card_info["bg_url"] = bg_el.get("src")
+            face_el = player_card_el.select_one(".playercard-26-special-img")
+            if face_el:
+                card_info["face_url"] = face_el.get("src")
+            
+            rating_el = player_card_el.select_one(".playercard-26-rating")
+            if rating_el:
+                card_info["rating"] = rating_el.get_text(strip=True)
+            
+            pos_el = player_card_el.select_one(".playercard-26-position")
+            if pos_el:
+                card_info["position"] = pos_el.get_text(strip=True)
+
+            name_el = player_card_el.select_one(".playercard-26-name")
+            if name_el:
+                card_info["name"] = name_el.get_text(strip=True)
+
+            # Extrair os 6 stats (PAC, SHO, PAS, DRI, DEF, PHY)
+            stats = []
+            stat_els = player_card_el.select(".playercard-26-stats")
+            for s in stat_els:
+                val = s.select_one(".playercard-stat-number")
+                lbl = s.select_one(".playercard-26-stat-value")
+                if val and lbl:
+                    stats.append({
+                        "name": lbl.get_text(strip=True),
+                        "value": val.get_text(strip=True)
+                    })
+            if stats:
+                card_info["stats"] = stats
+            
+            raw_card_data_str = json.dumps(card_info) if card_info else None
+
         results.append({
             "futbin_id": sbc_id,
             "name": name,
             "is_new": is_new,
             "image_url": image_url,
             "expires_text": expires_text,
+            "raw_card_data": raw_card_data_str,
             "url": f"{BASE_URL}{href}" if not href.startswith("http") else href,
         })
 
@@ -655,6 +697,7 @@ async def _process_single_sbc(
         is_new=sbc_data.get("is_new", False),
         image_url=local_image or sbc_data.get("image_url", ""),
         expires_text=sbc_data.get("expires_text", ""),
+        raw_card_data=sbc_data.get("raw_card_data", None),
         scraped_at=datetime.now(UTC),
         source="futbin",
     )

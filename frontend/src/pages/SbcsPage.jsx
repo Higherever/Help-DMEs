@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 
 import { useApi } from '../hooks/useApi';
+import FutbinCard from '../components/FutbinCard';
 
 // Componente SbcCard separado para gerenciar estado de expansão
 function SbcCard({ sbc, api, onNavigate }) {
@@ -160,39 +161,73 @@ function SbcCard({ sbc, api, onNavigate }) {
       {/* Body */}
       <div style={{ display: 'flex', padding: '16px', gap: 16 }}>
         {/* Left: Image Card Style */}
-        <div style={{ 
-          width: '90px', 
-          height: '115px',
-          flexShrink: 0, 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%)',
-          borderRadius: 12,
-          border: '1px solid rgba(255,255,255,0.08)',
-          padding: 8,
-          boxShadow: 'inset 0 0 20px rgba(255,255,255,0.02)',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          {cardImage ? (
-            <motion.img 
-              layoutId={`img-${sbc.id}`}
-              whileHover={{ scale: 1.1 }}
-              src={cardImage} 
-              alt={sbc.name} 
-              referrerPolicy="no-referrer"
-              style={{ width: '100%', height: '100%', objectFit: 'contain', zIndex: 2 }} 
-            />
-          ) : (
-            <LayoutGrid size={40} strokeWidth={1} style={{ opacity: 0.3 }} />
-          )}
-          {details?.player_card && (
-            <div style={{ position: 'absolute', top: 5, right: 5, background: 'var(--accent)', color: '#000', fontSize: '0.65rem', fontWeight: 900, padding: '1px 4px', borderRadius: 2, zIndex: 3 }}>
-              {details.player_card.overall}
+        {sbc.raw_card_data ? (() => {
+          let cardData;
+          try {
+            cardData = typeof sbc.raw_card_data === 'string' ? JSON.parse(sbc.raw_card_data) : sbc.raw_card_data;
+          } catch { cardData = null; }
+          return cardData ? (
+            <div style={{
+              width: '100px',
+              height: '140px',
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <FutbinCard data={cardData} />
             </div>
-          )}
-        </div>
+          ) : (
+            <div style={{ 
+              width: '90px', 
+              height: '115px',
+              flexShrink: 0, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%)',
+              borderRadius: 12,
+              border: '1px solid rgba(255,255,255,0.08)',
+              padding: 8,
+            }}>
+              <LayoutGrid size={40} strokeWidth={1} style={{ opacity: 0.3 }} />
+            </div>
+          );
+        })() : (
+          <div style={{ 
+            width: '90px', 
+            height: '115px',
+            flexShrink: 0, 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%)',
+            borderRadius: 12,
+            border: '1px solid rgba(255,255,255,0.08)',
+            padding: 8,
+            boxShadow: 'inset 0 0 20px rgba(255,255,255,0.02)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            {cardImage ? (
+              <motion.img 
+                layoutId={`img-${sbc.id}`}
+                whileHover={{ scale: 1.1 }}
+                src={cardImage} 
+                alt={sbc.name} 
+                referrerPolicy="no-referrer"
+                style={{ width: '100%', height: '100%', objectFit: 'contain', zIndex: 2 }} 
+              />
+            ) : (
+              <LayoutGrid size={40} strokeWidth={1} style={{ opacity: 0.3 }} />
+            )}
+            {details?.player_card && (
+              <div style={{ position: 'absolute', top: 5, right: 5, background: 'var(--accent)', color: '#000', fontSize: '0.65rem', fontWeight: 900, padding: '1px 4px', borderRadius: 2, zIndex: 3 }}>
+                {details.player_card.overall}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Right: Info Content */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>

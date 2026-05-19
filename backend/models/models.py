@@ -62,6 +62,7 @@ class SBCSet(Base):
     expires_text: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     repeatable_text: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     refresh_text: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    raw_card_data: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="JSON com bg, face, etc.")
     image_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     completion_pct: Mapped[Optional[float]] = mapped_column(Float, nullable=True, comment="% de quem completou")
     is_new: Mapped[bool] = mapped_column(Boolean, default=False)
