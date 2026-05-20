@@ -168,19 +168,31 @@ function SbcCard({ sbc, api, onNavigate }) {
           } catch { cardData = null; }
           return cardData ? (
             <div style={{
-              width: '100px',
-              height: '140px',
+              width: '300px',
+              height: '420px',
               flexShrink: 0,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              position: 'relative'
             }}>
-              <FutbinCard data={cardData} />
+              <div style={{
+                transform: 'scale(3)',
+                transformOrigin: 'center',
+                width: '100px',
+                height: '140px',
+                position: 'absolute',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <FutbinCard data={cardData} />
+              </div>
             </div>
           ) : (
             <div style={{ 
-              width: '90px', 
-              height: '115px',
+              width: '270px', 
+              height: '345px',
               flexShrink: 0, 
               display: 'flex', 
               alignItems: 'center', 
@@ -188,15 +200,15 @@ function SbcCard({ sbc, api, onNavigate }) {
               background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%)',
               borderRadius: 12,
               border: '1px solid rgba(255,255,255,0.08)',
-              padding: 8,
+              padding: 24,
             }}>
-              <LayoutGrid size={40} strokeWidth={1} style={{ opacity: 0.3 }} />
+              <LayoutGrid size={120} strokeWidth={1} style={{ opacity: 0.3 }} />
             </div>
           );
         })() : (
           <div style={{ 
-            width: '90px', 
-            height: '115px',
+            width: '270px', 
+            height: '345px',
             flexShrink: 0, 
             display: 'flex', 
             alignItems: 'center', 
@@ -204,7 +216,7 @@ function SbcCard({ sbc, api, onNavigate }) {
             background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%)',
             borderRadius: 12,
             border: '1px solid rgba(255,255,255,0.08)',
-            padding: 8,
+            padding: 24,
             boxShadow: 'inset 0 0 20px rgba(255,255,255,0.02)',
             position: 'relative',
             overflow: 'hidden'
@@ -219,10 +231,21 @@ function SbcCard({ sbc, api, onNavigate }) {
                 style={{ width: '100%', height: '100%', objectFit: 'contain', zIndex: 2 }} 
               />
             ) : (
-              <LayoutGrid size={40} strokeWidth={1} style={{ opacity: 0.3 }} />
+              <LayoutGrid size={120} strokeWidth={1} style={{ opacity: 0.3 }} />
             )}
             {details?.player_card && (
-              <div style={{ position: 'absolute', top: 5, right: 5, background: 'var(--accent)', color: '#000', fontSize: '0.65rem', fontWeight: 900, padding: '1px 4px', borderRadius: 2, zIndex: 3 }}>
+              <div style={{ 
+                position: 'absolute', 
+                top: 15, 
+                right: 15, 
+                background: 'var(--accent)', 
+                color: '#000', 
+                fontSize: '1.95rem', 
+                fontWeight: 900, 
+                padding: '3px 12px', 
+                borderRadius: 6, 
+                zIndex: 3 
+              }}>
                 {details.player_card.overall}
               </div>
             )}
@@ -230,13 +253,13 @@ function SbcCard({ sbc, api, onNavigate }) {
         )}
 
         {/* Right: Info Content */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ 
-            fontSize: '0.8rem', 
+            fontSize: '1rem', 
             color: 'var(--text-secondary)', 
-            lineHeight: 1.4, 
+            lineHeight: 1.5, 
             display: '-webkit-box', 
-            WebkitLineClamp: 2, 
+            WebkitLineClamp: 6, 
             WebkitBoxOrient: 'vertical', 
             overflow: 'hidden' 
           }} title={sbc.description}>
@@ -244,7 +267,7 @@ function SbcCard({ sbc, api, onNavigate }) {
           </div>
 
           {/* Reward Strip (Miniaturas de recompensas) */}
-          <div style={{ display: 'flex', gap: 4, height: 24, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', gap: 8, height: 48, overflow: 'hidden' }}>
              {((details?.rewards || []).length > 0) ? (
                details.rewards.map((r, i) => (
                  <img 
@@ -252,12 +275,12 @@ function SbcCard({ sbc, api, onNavigate }) {
                    src={getImageUrl(r.image_url)} 
                    title={r.name} 
                    referrerPolicy="no-referrer"
-                   style={{ height: '100%', width: 'auto', borderRadius: 2, border: '1px solid rgba(255,255,255,0.1)' }} 
+                   style={{ height: '100%', width: 'auto', borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)' }} 
                  />
                ))
              ) : (
-               <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                 <Box size={10} /> {sbc.category}
+               <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                 <Box size={14} /> {sbc.category}
                </div>
              )}
           </div>
@@ -265,21 +288,21 @@ function SbcCard({ sbc, api, onNavigate }) {
           <div style={{ 
             display: 'grid', 
             gridTemplateColumns: '1fr 1fr', 
-            gap: '8px', 
+            gap: '16px', 
             marginTop: 'auto'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ padding: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 4 }}>
-                <Trophy size={12} className="text-muted" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ padding: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
+                <Trophy size={20} className="text-muted" />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>{sbc.challenges_count}</span>
-                <span style={{ fontSize: '0.5rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em' }}>DESAFIOS</span>
+                <span style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-primary)' }}>{sbc.challenges_count}</span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em' }}>DESAFIOS</span>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               {formatExpiresText(sbc.expires_text || getExpiresText(sbc.expires_at)) && (
-                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                   ⏱️ {formatExpiresText(sbc.expires_text || getExpiresText(sbc.expires_at))}
                 </span>
               )}
@@ -419,13 +442,14 @@ function SbcCardSkeleton() {
         <div className="skeleton" style={{ height: 20, width: 60, borderRadius: 4 }}></div>
       </div>
       <div style={{ display: 'flex', padding: '16px', gap: 16 }}>
-        <div className="skeleton" style={{ width: '90px', height: '115px', borderRadius: 12, flexShrink: 0 }}></div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div className="skeleton" style={{ height: 12, width: '100%', borderRadius: 4 }}></div>
-          <div className="skeleton" style={{ height: 12, width: '80%', borderRadius: 4 }}></div>
-          <div style={{ marginTop: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: 'rgba(0,0,0,0.1)', padding: '10px', borderRadius: 8 }}>
-             <div className="skeleton" style={{ height: 24, width: '100%', borderRadius: 4 }}></div>
-             <div className="skeleton" style={{ height: 24, width: '100%', borderRadius: 4 }}></div>
+        <div className="skeleton" style={{ width: '270px', height: '345px', borderRadius: 12, flexShrink: 0 }}></div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="skeleton" style={{ height: 16, width: '100%', borderRadius: 4 }}></div>
+          <div className="skeleton" style={{ height: 16, width: '80%', borderRadius: 4 }}></div>
+          <div className="skeleton" style={{ height: 16, width: '50%', borderRadius: 4 }}></div>
+          <div style={{ marginTop: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', background: 'rgba(0,0,0,0.1)', padding: '12px', borderRadius: 8 }}>
+             <div className="skeleton" style={{ height: 32, width: '100%', borderRadius: 4 }}></div>
+             <div className="skeleton" style={{ height: 32, width: '100%', borderRadius: 4 }}></div>
           </div>
         </div>
       </div>
@@ -544,6 +568,18 @@ export default function SbcsPage({ onNavigate }) {
 
     // Ordenação
     result.sort((a, b) => {
+      // Deixar os SBCs diários por último
+      const isDaily = (name) => {
+        const lower = name.toLowerCase();
+        return lower.includes('daily') || lower.includes('diário') || lower.includes('diario');
+      };
+      
+      const aIsDaily = isDaily(a.name);
+      const bIsDaily = isDaily(b.name);
+
+      if (aIsDaily && !bIsDaily) return 1;
+      if (!aIsDaily && bIsDaily) return -1;
+
       if (sortOption === 'cost_desc') return (b.total_cost || 0) - (a.total_cost || 0);
       if (sortOption === 'cost_asc') return (a.total_cost || 0) - (b.total_cost || 0);
       if (sortOption === 'exp_asc') {
@@ -577,7 +613,7 @@ export default function SbcsPage({ onNavigate }) {
            </div>
         )}
         <div className="skeleton" style={{ height: 60, width: '100%', borderRadius: 8 }}></div>
-        <div className="grid-3">
+        <div className="grid-2">
           {[1, 2, 3, 4, 5, 6].map(i => <SbcCardSkeleton key={i} />)}
         </div>
       </div>
@@ -635,7 +671,7 @@ export default function SbcsPage({ onNavigate }) {
           </button>
         </div>
       ) : (
-        <div className="grid-3">
+        <div className="grid-2">
           {filteredAndSortedSbcs.map(sbc => (
             <SbcCard key={sbc.id} sbc={sbc} api={api} onNavigate={onNavigate} />
           ))}
