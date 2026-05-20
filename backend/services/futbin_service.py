@@ -665,6 +665,76 @@ async def scrape_all_sbcs(db: AsyncSession) -> dict:
         return {"status": "failed", "scraped": scraped_count, "error": str(e)}
 
 
+
+async def _fetch_and_parse_player(session: aiohttp.ClientSession, url: str) -> dict:
+    """Busca a página de um jogador e extrai metadados premium (HD, ícones, playstyles)."""
+    try:
+        html = await _fetch(session, url)
+        if not html:
+            return {}
+            
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, "lxml")
+        data = {}
+        
+        # 1. HD Images from playercard-26
+        card = soup.select_one('.playercard-26')
+        if card:
+            bg = card.select_one('.playercard-26-bg')
+            if bg:
+                data['bg_url_hd'] = bg.get('src', '').replace('?fm=webp', '') # Keep full URL
+            
+            face = card.select_one('.playercard-26-special-img')
+            if not face:
+                face = card.select_one('img[src*="players/p"]')
+            if face:
+                data['face_url_hd'] = face.get('src', '')
+                
+        # 2. Club, Nation, League
+        nation = soup.select_one('img[src*="nation/"]')
+        club = soup.select_one('img[src*="clubs/"]')
+        league = soup.select_one('img[src*="cards/tiny/"]') # some leagues have "leagues_live" etc.
+        
+        if nation: data['nation_url'] = nation.get('src', '')
+        if club: data['club_url'] = club.get('src', '')
+        if league: data['league_url'] = league.get('src', '')
+        
+        # 3. Playstyles
+        ps_elements = soup.select('.playstyle-icon')
+        playstyles = []
+        for p in ps_elements:
+            title = p.get('title', '') or p.get('data-original-title', '')
+            src = p.get('src', '')
+            is_plus = "plus" in src.lower()
+            if title or src:
+                playstyles.append({"name": title, "icon_url": src, "is_plus": is_plus})
+                
+        data['playstyles'] = playstyles
+        
+        # 4. Workrates, SM, WF
+        # Example format: <div>Skills</div> <div>4</div>
+        skills_div = soup.find(string="Skills")
+        if skills_div and skills_div.parent and skills_div.parent.find_next_sibling():
+            data['skill_moves'] = skills_div.parent.find_next_sibling().get_text(strip=True)
+            
+        wf_div = soup.find(string="Weak Foot")
+        if wf_div and wf_div.parent and wf_div.parent.find_next_sibling():
+            data['weak_foot'] = wf_div.parent.find_next_sibling().get_text(strip=True)
+            
+        wr_div = soup.find(string="Work Rate")
+        if wr_div and wr_div.parent and wr_div.parent.find_next_sibling():
+            data['workrates'] = wr_div.parent.find_next_sibling().get_text(strip=True)
+            
+        pos_div = soup.find(string="Alt Pos")
+        if pos_div and pos_div.parent and pos_div.parent.find_next_sibling():
+            data['alt_positions'] = pos_div.parent.find_next_sibling().get_text(strip=True)
+
+        return data
+    except Exception as e:
+        logger.error(f"Erro ao parsear player HD em {url}: {e}")
+        return {}
+
+
 async def _process_single_sbc(
     http: aiohttp.ClientSession, db: AsyncSession, sbc_data: dict
 ):
@@ -738,15 +808,34 @@ async def _process_single_sbc(
             )
             db.add(reward)
 
-    # Player card (se SBC de jogador)
+    # Player card (se SBC de jogador) e metadados HD
     if detail.get("player_data"):
         pd = detail["player_data"]
+        player_url = pd.get("url", "")
+        
         player_card = PlayerCard(
             sbc_set_id=sbc_set.id,
             name=sbc_data["name"],  # Nome já limpo do _parse_sbc_list
             overall=0,
-            player_url=pd.get("url", ""),
+            player_url=player_url,
         )
         db.add(player_card)
+        
+        # Faz a raspagem HD do jogador
+        if player_url:
+            await asyncio.sleep(DELAY_BETWEEN) # delay extra para não tomar block
+            hd_data = await _fetch_and_parse_player(http, player_url)
+            if hd_data:
+                import json
+                current_raw = {}
+                if sbc_set.raw_card_data:
+                    try:
+                        current_raw = json.loads(sbc_set.raw_card_data)
+                    except:
+                        pass
+                
+                # Merge old raw_card_data with new hd_data
+                current_raw.update(hd_data)
+                sbc_set.raw_card_data = json.dumps(current_raw)
 
     logger.debug(f"✓ {sbc_data['name']} ({len(detail.get('challenges', []))} challenges)")

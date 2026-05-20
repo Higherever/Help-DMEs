@@ -159,8 +159,8 @@ function SbcCard({ sbc, api, onNavigate }) {
       </div>
 
       {/* Body */}
-      <div style={{ display: 'flex', padding: '16px', gap: 16 }}>
-        {/* Left: Image Card Style */}
+      <div style={{ display: 'flex', padding: '16px', gap: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
+        {/* Left: Player Card */}
         {sbc.raw_card_data ? (() => {
           let cardData;
           try {
@@ -168,81 +168,52 @@ function SbcCard({ sbc, api, onNavigate }) {
           } catch { cardData = null; }
           return cardData ? (
             <div style={{
-              width: '300px',
-              height: '420px',
               flexShrink: 0,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              position: 'relative'
             }}>
-              <div style={{
-                transform: 'scale(3)',
-                transformOrigin: 'center',
-                width: '100px',
-                height: '140px',
-                position: 'absolute',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <FutbinCard data={cardData} />
-              </div>
+              <FutbinCard data={cardData} size="lg" />
             </div>
           ) : (
-            <div style={{ 
-              width: '270px', 
-              height: '345px',
-              flexShrink: 0, 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%)',
-              borderRadius: 12,
-              border: '1px solid rgba(255,255,255,0.08)',
-              padding: 24,
-            }}>
-              <LayoutGrid size={120} strokeWidth={1} style={{ opacity: 0.3 }} />
-            </div>
+            <FutbinCard data={null} size="lg" />
           );
         })() : (
           <div style={{ 
-            width: '270px', 
-            height: '345px',
+            width: '252px', 
+            height: '353px',
             flexShrink: 0, 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center',
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%)',
+            background: 'linear-gradient(145deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
             borderRadius: 12,
             border: '1px solid rgba(255,255,255,0.08)',
-            padding: 24,
-            boxShadow: 'inset 0 0 20px rgba(255,255,255,0.02)',
             position: 'relative',
             overflow: 'hidden'
           }}>
             {cardImage ? (
               <motion.img 
                 layoutId={`img-${sbc.id}`}
-                whileHover={{ scale: 1.1 }}
+                whileHover={{ scale: 1.05 }}
                 src={cardImage} 
                 alt={sbc.name} 
                 referrerPolicy="no-referrer"
-                style={{ width: '100%', height: '100%', objectFit: 'contain', zIndex: 2 }} 
+                style={{ width: '85%', height: '85%', objectFit: 'contain', zIndex: 2 }} 
               />
             ) : (
-              <LayoutGrid size={120} strokeWidth={1} style={{ opacity: 0.3 }} />
+              <LayoutGrid size={80} strokeWidth={1} style={{ opacity: 0.2 }} />
             )}
             {details?.player_card && (
               <div style={{ 
                 position: 'absolute', 
-                top: 15, 
-                right: 15, 
+                top: 12, 
+                right: 12, 
                 background: 'var(--accent)', 
                 color: '#000', 
-                fontSize: '1.95rem', 
+                fontSize: '1.6rem', 
                 fontWeight: 900, 
-                padding: '3px 12px', 
+                padding: '2px 10px', 
                 borderRadius: 6, 
                 zIndex: 3 
               }}>
@@ -253,7 +224,7 @@ function SbcCard({ sbc, api, onNavigate }) {
         )}
 
         {/* Right: Info Content */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ flex: 1, minWidth: '200px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ 
             fontSize: '1rem', 
             color: 'var(--text-secondary)', 
@@ -441,9 +412,9 @@ function SbcCardSkeleton() {
         <div className="skeleton" style={{ height: 20, width: '60%', borderRadius: 4 }}></div>
         <div className="skeleton" style={{ height: 20, width: 60, borderRadius: 4 }}></div>
       </div>
-      <div style={{ display: 'flex', padding: '16px', gap: 16 }}>
-        <div className="skeleton" style={{ width: '270px', height: '345px', borderRadius: 12, flexShrink: 0 }}></div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', padding: '16px', gap: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
+        <div className="skeleton" style={{ width: '252px', height: '353px', borderRadius: 12, flexShrink: 0 }}></div>
+        <div style={{ flex: 1, minWidth: '200px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div className="skeleton" style={{ height: 16, width: '100%', borderRadius: 4 }}></div>
           <div className="skeleton" style={{ height: 16, width: '80%', borderRadius: 4 }}></div>
           <div className="skeleton" style={{ height: 16, width: '50%', borderRadius: 4 }}></div>
@@ -613,7 +584,7 @@ export default function SbcsPage({ onNavigate }) {
            </div>
         )}
         <div className="skeleton" style={{ height: 60, width: '100%', borderRadius: 8 }}></div>
-        <div className="grid-2">
+        <div className="sbc-grid">
           {[1, 2, 3, 4, 5, 6].map(i => <SbcCardSkeleton key={i} />)}
         </div>
       </div>
@@ -671,7 +642,7 @@ export default function SbcsPage({ onNavigate }) {
           </button>
         </div>
       ) : (
-        <div className="grid-2">
+        <div className="sbc-grid">
           {filteredAndSortedSbcs.map(sbc => (
             <SbcCard key={sbc.id} sbc={sbc} api={api} onNavigate={onNavigate} />
           ))}

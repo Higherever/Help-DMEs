@@ -24,3 +24,9 @@ Thumbs.db
 # Logs
 logs/
 *.log
+
+# Local/Graphify
+graphify-out/
+test_player_scrape.py
+update_futbin.py
+
