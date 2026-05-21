@@ -203,19 +203,111 @@ class PlayerCard(Base):
     """
     Carta de jogador que é a recompensa principal de um SBC player.
     Ex: Caicedo 93 TOTS HM, Schweinsteiger 96 Trophy Titans ICON.
+
+    Dados enriquecidos por múltiplas fontes:
+      - Futbin scraping: bg, face, rating, position, card_type, 6 face stats
+      - SoFIFA API: 30 sub-atributos, metadados biográficos, CDN de imagens
+      - easySBC: meta_rating, meta_tier
     """
     __tablename__ = "player_cards"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    sbc_set_id: Mapped[int] = mapped_column(Integer, ForeignKey("sbc_sets.id", ondelete="CASCADE"), nullable=False)
+
+    # ── IDs cruzados entre fontes ──
     futgg_player_id: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, comment="ID no Fut.gg")
+    sofifa_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, comment="ID pivot SoFIFA")
+    futbin_id: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, comment="ID no Futbin")
+
+    # ── Dados básicos ──
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     overall: Mapped[int] = mapped_column(Integer, nullable=False)
     position: Mapped[Optional[str]] = mapped_column(String(10), nullable=True, comment="CM, ST, etc.")
+    alt_positions: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, comment="LM,LW")
     card_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, comment="TOTS HM, Trophy Titans ICON, etc.")
-    meta_rating: Mapped[Optional[float]] = mapped_column(Float, nullable=True, comment="Meta rating ex: 90.2")
+
+    # ── 6 Face Stats (PAC, SHO, PAS, DRI, DEF, PHY) ──
+    pace: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    shooting: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    passing: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    dribbling_stat: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, comment="Face stat DRI")
+    defending: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    physic: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+    # ── 30 Sub-atributos detalhados ──
+    # Pace
+    acceleration: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    sprint_speed: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # Shooting
+    finishing: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    shot_power: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    long_shots: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    volleys: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    positioning_att: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, comment="Attacking positioning")
+    # Passing
+    short_passing: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    long_passing: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    crossing: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    curve: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    free_kick: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    vision: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # Dribbling
+    agility: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    balance: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    reactions: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    ball_control: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    composure: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    skill_dribbling: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, comment="Sub-stat dribbling")
+    # Defending
+    interceptions: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    heading: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    marking: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    standing_tackle: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    sliding_tackle: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # Physical
+    jumping: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    stamina: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    strength: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    aggression: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # Extra
+    penalties: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+    # ── GK Stats ──
+    gk_diving: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    gk_handling: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    gk_kicking: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    gk_positioning: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    gk_reflexes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+    # ── Metadados biográficos ──
+    skill_moves: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, comment="1-5 estrelas")
+    weak_foot: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, comment="1-5 estrelas")
+    foot: Mapped[Optional[str]] = mapped_column(String(10), nullable=True, comment="Right / Left")
+    height: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, comment="cm")
+    weight: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, comment="kg")
+    age: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    country: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    country_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    club_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    club_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    league_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    league_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    workrates: Mapped[Optional[str]] = mapped_column(String(30), nullable=True, comment="High/Medium")
+    accelerate_type: Mapped[Optional[str]] = mapped_column(String(20), nullable=True, comment="EXPLOSIVE, CONTROLLED, LENGTHY")
+
+    # ── URLs de imagens (CDN) ──
     card_image_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     player_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    sbc_set_id: Mapped[int] = mapped_column(Integer, ForeignKey("sbc_sets.id", ondelete="CASCADE"), nullable=False)
+    face_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="cdn.sofifa.net rosto")
+    render_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="cdn.futbin.com render FUT")
+    club_logo_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    nation_flag_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    league_logo_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # ── Meta rating (easySBC) ──
+    meta_rating: Mapped[Optional[float]] = mapped_column(Float, nullable=True, comment="Meta rating ex: 90.2")
+    meta_tier: Mapped[Optional[str]] = mapped_column(String(10), nullable=True, comment="S, A+, A, B, C")
+    playstyles_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="JSON array de playstyles")
 
     # Relacionamento
     sbc_set: Mapped["SBCSet"] = relationship(back_populates="player_card")
@@ -397,3 +489,36 @@ class ScrapeLog(Base):
 
     def __repr__(self) -> str:
         return f"<ScrapeLog(source='{self.source}', status='{self.status}', scraped={self.sbcs_scraped})>"
+
+
+# ══════════════════════════════════════════════
+#  FC PLAYER — Catálogo Global de Jogadores
+# ══════════════════════════════════════════════
+
+class FCPlayer(Base):
+    """
+    Catálogo global de todos os jogadores do jogo (FC 26), 
+    independente de DMEs. Usado para banco de dados geral.
+    """
+    __tablename__ = "fc_players"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    futbin_id: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, comment="ID no Futbin")
+    
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    overall: Mapped[int] = mapped_column(Integer, nullable=False)
+    position: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    nation: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    club: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    league: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    card_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, comment="Raridade/Versão")
+    
+    # URLs
+    face_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    bg_url_raw: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="Link original do AVIF no Futbin")
+    card_template_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="Link local PNG processado (fundo limpo)")
+    
+    scraped_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+
+    def __repr__(self) -> str:
+        return f"<FCPlayer(name='{self.name}', overall={self.overall}, futbin_id='{self.futbin_id}')>"

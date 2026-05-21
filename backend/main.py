@@ -226,7 +226,12 @@ async def list_sbcs(
     session: AsyncSession = Depends(get_session_dependency),
 ):
     """Lista todos os SBCs coletados, com filtro opcional por categoria."""
-    query = select(SBCSet).order_by(SBCSet.scraped_at.desc())
+    from sqlalchemy.orm import selectinload
+    query = (
+        select(SBCSet)
+        .options(selectinload(SBCSet.player_card))  # Eager load player_card
+        .order_by(SBCSet.scraped_at.desc())
+    )
     if category:
         query = query.where(SBCSet.category == category)
 
@@ -384,7 +389,28 @@ def _player_to_response(player) -> UserSquadPlayerResponse:
 
 
 def _sbc_to_response(s: SBCSet) -> SBCSetResponse:
-    """Converte SBCSet ORM → schema Pydantic resumido."""
+    """Converte SBCSet ORM → schema Pydantic resumido (com player_card compacto inline)."""
+    from backend.schemas.schemas import PlayerCardCompactResponse
+
+    # Montar PlayerCardCompactResponse se o SBC tiver player_card
+    pc_compact = None
+    if s.player_card:
+        pc = s.player_card
+        pc_compact = PlayerCardCompactResponse(
+            id=pc.id, name=pc.name, overall=pc.overall,
+            position=pc.position, alt_positions=pc.alt_positions,
+            card_type=pc.card_type,
+            pace=pc.pace, shooting=pc.shooting, passing=pc.passing,
+            dribbling_stat=pc.dribbling_stat, defending=pc.defending, physic=pc.physic,
+            skill_moves=pc.skill_moves, weak_foot=pc.weak_foot,
+            workrates=pc.workrates, accelerate_type=pc.accelerate_type,
+            card_image_url=pc.card_image_url, face_url=pc.face_url,
+            render_url=pc.render_url, club_logo_url=pc.club_logo_url,
+            nation_flag_url=pc.nation_flag_url, league_logo_url=pc.league_logo_url,
+            meta_rating=pc.meta_rating, meta_tier=pc.meta_tier,
+            playstyles_json=pc.playstyles_json,
+        )
+
     return SBCSetResponse(
         id=s.id, futgg_id=s.futgg_id, name=s.name,
         description=s.description, category=s.category,
@@ -394,6 +420,7 @@ def _sbc_to_response(s: SBCSet) -> SBCSetResponse:
         refresh_text=s.refresh_text, raw_card_data=s.raw_card_data,
         image_url=s.image_url, completion_pct=s.completion_pct,
         is_new=s.is_new, source=s.source, scraped_at=s.scraped_at,
+        player_card=pc_compact,
     )
 
 
@@ -439,8 +466,40 @@ def _sbc_to_detail_response(sbc) -> SBCSetDetailResponse:
         pc = sbc.player_card
         player_card = PlayerCardResponse(
             id=pc.id, name=pc.name, overall=pc.overall,
-            position=pc.position, card_type=pc.card_type,
-            meta_rating=pc.meta_rating, card_image_url=pc.card_image_url,
+            position=pc.position, alt_positions=pc.alt_positions,
+            card_type=pc.card_type,
+            # Face stats
+            pace=pc.pace, shooting=pc.shooting, passing=pc.passing,
+            dribbling_stat=pc.dribbling_stat, defending=pc.defending, physic=pc.physic,
+            # Sub-atributos
+            acceleration=pc.acceleration, sprint_speed=pc.sprint_speed,
+            finishing=pc.finishing, shot_power=pc.shot_power,
+            long_shots=pc.long_shots, volleys=pc.volleys, positioning_att=pc.positioning_att,
+            short_passing=pc.short_passing, long_passing=pc.long_passing,
+            crossing=pc.crossing, curve=pc.curve, free_kick=pc.free_kick, vision=pc.vision,
+            agility=pc.agility, balance=pc.balance, reactions=pc.reactions,
+            ball_control=pc.ball_control, composure=pc.composure, skill_dribbling=pc.skill_dribbling,
+            interceptions=pc.interceptions, heading=pc.heading, marking=pc.marking,
+            standing_tackle=pc.standing_tackle, sliding_tackle=pc.sliding_tackle,
+            jumping=pc.jumping, stamina=pc.stamina, strength=pc.strength, aggression=pc.aggression,
+            penalties=pc.penalties,
+            # GK
+            gk_diving=pc.gk_diving, gk_handling=pc.gk_handling, gk_kicking=pc.gk_kicking,
+            gk_positioning=pc.gk_positioning, gk_reflexes=pc.gk_reflexes,
+            # Metadados
+            skill_moves=pc.skill_moves, weak_foot=pc.weak_foot, foot=pc.foot,
+            height=pc.height, weight=pc.weight, age=pc.age,
+            country=pc.country, club_name=pc.club_name, league_name=pc.league_name,
+            workrates=pc.workrates, accelerate_type=pc.accelerate_type,
+            # URLs CDN
+            card_image_url=pc.card_image_url, face_url=pc.face_url, render_url=pc.render_url,
+            club_logo_url=pc.club_logo_url, nation_flag_url=pc.nation_flag_url,
+            league_logo_url=pc.league_logo_url,
+            # Meta
+            meta_rating=pc.meta_rating, meta_tier=pc.meta_tier,
+            playstyles_json=pc.playstyles_json,
+            # IDs
+            sofifa_id=pc.sofifa_id, futbin_id=pc.futbin_id,
         )
 
     # Reutiliza o mapeador base para campos comuns
@@ -448,7 +507,7 @@ def _sbc_to_detail_response(sbc) -> SBCSetDetailResponse:
     
     return SBCSetDetailResponse(
         **base.model_dump(),
-        challenges=challenges, rewards=set_rewards, player_card=player_card,
+        challenges=challenges, rewards=set_rewards, player_card_full=player_card,
     )
 
 

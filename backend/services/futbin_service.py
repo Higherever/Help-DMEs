@@ -30,6 +30,7 @@ from backend.models.models import (
     SBCSet, SBCChallenge, ChallengeRequirement,
     SBCReward, PlayerCard, ScrapeLog,
 )
+from backend.services.image_processor import download_and_process_card_bg
 
 logger = logging.getLogger("help_dmes.futbin")
 
@@ -813,29 +814,186 @@ async def _process_single_sbc(
         pd = detail["player_data"]
         player_url = pd.get("url", "")
         
+        # ── 1. Extrair dados iniciais do raw_card_data (listagem) ──
+        import json
+        initial_data = {}
+        if sbc_set.raw_card_data:
+            try:
+                initial_data = json.loads(sbc_set.raw_card_data)
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        # Parsear stats da listagem ([{name: "PAC", value: "95"}, ...])
+        face_stats = {}
+        stat_map = {"PAC": "pace", "SHO": "shooting", "PAS": "passing",
+                     "DRI": "dribbling_stat", "DEF": "defending", "PHY": "physic"}
+        for s in initial_data.get("stats", []):
+            col = stat_map.get(s.get("name", "").upper())
+            if col:
+                try:
+                    face_stats[col] = int(s["value"])
+                except (ValueError, TypeError):
+                    pass
+
+        # ── 2. Criar PlayerCard com dados iniciais ──
         player_card = PlayerCard(
             sbc_set_id=sbc_set.id,
-            name=sbc_data["name"],  # Nome já limpo do _parse_sbc_list
-            overall=0,
+            name=initial_data.get("name") or sbc_data["name"],
+            overall=int(initial_data.get("rating") or 0),
+            position=initial_data.get("position"),
             player_url=player_url,
+            # Face stats da listagem
+            pace=face_stats.get("pace"),
+            shooting=face_stats.get("shooting"),
+            passing=face_stats.get("passing"),
+            dribbling_stat=face_stats.get("dribbling_stat"),
+            defending=face_stats.get("defending"),
+            physic=face_stats.get("physic"),
+            # URLs da listagem (baixa res como fallback)
+            card_image_url=initial_data.get("bg_url"),
+            face_url=initial_data.get("face_url"),
         )
         db.add(player_card)
         
-        # Faz a raspagem HD do jogador
+        # ── 3. Enriquecer com scraping HD da página do jogador ──
         if player_url:
-            await asyncio.sleep(DELAY_BETWEEN) # delay extra para não tomar block
+            await asyncio.sleep(DELAY_BETWEEN)
             hd_data = await _fetch_and_parse_player(http, player_url)
             if hd_data:
-                import json
-                current_raw = {}
-                if sbc_set.raw_card_data:
-                    try:
-                        current_raw = json.loads(sbc_set.raw_card_data)
-                    except:
-                        pass
+                # URLs HD (sobrescreve as de baixa res)
+                if hd_data.get('bg_url_hd'):
+                    local_bg_path = await download_and_process_card_bg(hd_data['bg_url_hd'], sbc_set.id, http)
+                    player_card.card_image_url = local_bg_path if local_bg_path else hd_data['bg_url_hd']
+                if hd_data.get('face_url_hd'):
+                    player_card.render_url = hd_data['face_url_hd']
                 
-                # Merge old raw_card_data with new hd_data
+                # Badges CDN
+                if hd_data.get('nation_url'):
+                    player_card.nation_flag_url = hd_data['nation_url']
+                if hd_data.get('club_url'):
+                    player_card.club_logo_url = hd_data['club_url']
+                if hd_data.get('league_url'):
+                    player_card.league_logo_url = hd_data['league_url']
+                
+                # Metadados do jogador
+                if hd_data.get('alt_positions'):
+                    player_card.alt_positions = hd_data['alt_positions']
+                if hd_data.get('skill_moves'):
+                    try: player_card.skill_moves = int(hd_data['skill_moves'])
+                    except (ValueError, TypeError): pass
+                if hd_data.get('weak_foot'):
+                    try: player_card.weak_foot = int(hd_data['weak_foot'])
+                    except (ValueError, TypeError): pass
+                if hd_data.get('workrates'):
+                    player_card.workrates = hd_data['workrates']
+                if hd_data.get('playstyles'):
+                    player_card.playstyles_json = json.dumps(hd_data['playstyles'])
+
+                # Manter raw_card_data atualizado (backward-compat para frontend)
+                current_raw = dict(initial_data)
                 current_raw.update(hd_data)
                 sbc_set.raw_card_data = json.dumps(current_raw)
+        
+        # ── Enriquecer com SoFIFA API ──
+        await _enrich_with_sofifa(http, player_card, sbc_data["name"])
 
     logger.debug(f"✓ {sbc_data['name']} ({len(detail.get('challenges', []))} challenges)")
+
+
+async def _enrich_with_sofifa(
+    http: aiohttp.ClientSession,
+    player_card: PlayerCard,
+    player_name: str,
+):
+    """
+    Enriquece PlayerCard com dados da SoFIFA API.
+    Busca por nome → obtém sofifa_id → busca stats completos.
+    """
+    try:
+        from backend.services.sofifa_service import (
+            search_player_sofifa, fetch_player_by_id, build_image_urls
+        )
+
+        # Buscar sofifa_id pelo nome
+        sofifa_id = await search_player_sofifa(http, player_name)
+        if not sofifa_id:
+            logger.debug(f"SoFIFA: jogador '{player_name}' não encontrado")
+            return
+
+        player_card.sofifa_id = sofifa_id
+
+        # Buscar stats completos
+        data = await fetch_player_by_id(http, sofifa_id)
+        if not data:
+            logger.debug(f"SoFIFA: sem dados para ID {sofifa_id}")
+            return
+
+        # Preencher campos do PlayerCard com dados SoFIFA
+        if not player_card.overall or player_card.overall == 0:
+            player_card.overall = data.get("overall", 0)
+        if not player_card.position:
+            player_card.position = data.get("position")
+
+        # Face stats
+        player_card.pace = data.get("pace")
+        player_card.shooting = data.get("shooting")
+        player_card.passing = data.get("passing")
+        player_card.dribbling_stat = data.get("dribbling_face")
+        player_card.defending = data.get("defending")
+        player_card.physic = data.get("physic")
+
+        # Sub-atributos (30)
+        for field in [
+            "acceleration", "sprint_speed", "finishing", "shot_power",
+            "long_shots", "volleys", "positioning_att",
+            "short_passing", "long_passing", "crossing", "curve",
+            "free_kick", "vision", "agility", "balance", "reactions",
+            "ball_control", "composure", "skill_dribbling",
+            "interceptions", "heading", "marking",
+            "standing_tackle", "sliding_tackle",
+            "jumping", "stamina", "strength", "aggression", "penalties",
+        ]:
+            val = data.get(field)
+            if val is not None:
+                setattr(player_card, field, val)
+
+        # GK stats
+        for gk_field in ["gk_diving", "gk_handling", "gk_kicking", "gk_positioning", "gk_reflexes"]:
+            val = data.get(gk_field)
+            if val is not None:
+                setattr(player_card, gk_field, val)
+
+        # Metadados biográficos (não sobrescrever se já preenchido pelo Futbin)
+        if not player_card.skill_moves and data.get("skill_moves"):
+            player_card.skill_moves = data["skill_moves"]
+        if not player_card.weak_foot and data.get("weak_foot"):
+            player_card.weak_foot = data["weak_foot"]
+        player_card.foot = data.get("foot")
+        player_card.height = data.get("height")
+        player_card.weight = data.get("weight")
+        player_card.age = data.get("age")
+        player_card.country = data.get("country")
+        player_card.country_id = data.get("country_id")
+        if not player_card.alt_positions and data.get("alt_positions"):
+            player_card.alt_positions = data["alt_positions"]
+
+        # URLs de CDN da SoFIFA (como fallback se Futbin não tiver)
+        urls = build_image_urls(
+            sofifa_id,
+            club_id=data.get("club_id"),
+            country_id=data.get("country_id"),
+            league_id=data.get("league_id"),
+        )
+        if not player_card.face_url and urls.get("face_120"):
+            player_card.face_url = urls["face_120"]
+        if not player_card.nation_flag_url and urls.get("nation_flag"):
+            player_card.nation_flag_url = urls["nation_flag"]
+        if not player_card.club_logo_url and urls.get("club_light_60"):
+            player_card.club_logo_url = urls["club_light_60"]
+        if not player_card.league_logo_url and urls.get("league_60"):
+            player_card.league_logo_url = urls["league_60"]
+
+        logger.info(f"✅ SoFIFA enriqueceu: {player_name} (ID={sofifa_id}, OVR={data.get('overall')})")
+
+    except Exception as e:
+        logger.warning(f"SoFIFA enrichment falhou para '{player_name}': {e}")

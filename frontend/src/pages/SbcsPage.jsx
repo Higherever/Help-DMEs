@@ -161,25 +161,83 @@ function SbcCard({ sbc, api, onNavigate }) {
       {/* Body */}
       <div style={{ display: 'flex', padding: '16px', gap: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
         {/* Left: Player Card */}
-        {sbc.raw_card_data ? (() => {
-          let cardData;
-          try {
-            cardData = typeof sbc.raw_card_data === 'string' ? JSON.parse(sbc.raw_card_data) : sbc.raw_card_data;
-          } catch { cardData = null; }
+        {(() => {
+          // ── Fonte única de verdade: player_card da API (inline na listagem) ──
+          let cardData = null;
+
+          if (sbc.player_card) {
+            // Dados estruturados do player_card (fonte primária)
+            const pc = sbc.player_card;
+            // Merge com dados completos do detalhe se disponível
+            const full = details?.player_card_full;
+
+            cardData = {
+              // Dados visuais base
+              bg_url: pc.card_image_url,
+              face_url: pc.render_url || pc.face_url,
+              rating: pc.overall,
+              position: pc.position,
+              name: pc.name,
+              // 6 face stats
+              stats: [
+                { name: 'PAC', value: String(pc.pace || 0) },
+                { name: 'SHO', value: String(pc.shooting || 0) },
+                { name: 'PAS', value: String(pc.passing || 0) },
+                { name: 'DRI', value: String(pc.dribbling_stat || 0) },
+                { name: 'DEF', value: String(pc.defending || 0) },
+                { name: 'PHY', value: String(pc.physic || 0) },
+              ],
+              // Metadados inline
+              skill_moves: pc.skill_moves,
+              weak_foot: pc.weak_foot,
+              workrates: pc.workrates,
+              accelerate_type: pc.accelerate_type,
+              alt_positions: pc.alt_positions,
+              // URLs visuais
+              nation_url: pc.nation_flag_url,
+              club_url: pc.club_logo_url,
+              league_url: pc.league_logo_url,
+              // Meta
+              meta_rating: pc.meta_rating,
+              meta_tier: pc.meta_tier,
+              playstyles: pc.playstyles_json ? JSON.parse(pc.playstyles_json) : [],
+              // Sub-atributos completos (do detalhe, se carregado)
+              ...(full ? {
+                acceleration: full.acceleration, sprint_speed: full.sprint_speed,
+                finishing: full.finishing, shot_power: full.shot_power,
+                long_shots: full.long_shots, volleys: full.volleys, positioning_att: full.positioning_att,
+                short_passing: full.short_passing, long_passing: full.long_passing,
+                crossing: full.crossing, curve: full.curve, free_kick: full.free_kick, vision: full.vision,
+                agility: full.agility, balance: full.balance, reactions: full.reactions,
+                ball_control: full.ball_control, composure: full.composure, skill_dribbling: full.skill_dribbling,
+                interceptions: full.interceptions, heading: full.heading, marking: full.marking,
+                standing_tackle: full.standing_tackle, sliding_tackle: full.sliding_tackle,
+                jumping: full.jumping, stamina: full.stamina, strength: full.strength, aggression: full.aggression,
+                penalties: full.penalties,
+                foot: full.foot, height: full.height, weight: full.weight, age: full.age,
+                country: full.country, club_name: full.club_name, league_name: full.league_name,
+              } : {}),
+            };
+          } else if (sbc.raw_card_data) {
+            // ── Fallback legado: parsear raw_card_data JSON ──
+            try {
+              cardData = typeof sbc.raw_card_data === 'string'
+                ? JSON.parse(sbc.raw_card_data)
+                : sbc.raw_card_data;
+            } catch { cardData = null; }
+          }
+
           return cardData ? (
             <div style={{
               flexShrink: 0,
               display: 'flex',
-              alignItems: 'center',
+              alignItems: 'flex-start',
               justifyContent: 'center',
             }}>
               <FutbinCard data={cardData} size="lg" />
             </div>
           ) : (
-            <FutbinCard data={null} size="lg" />
-          );
-        })() : (
-          <div style={{ 
+            <div style={{ 
             width: '252px', 
             height: '353px',
             flexShrink: 0, 
@@ -204,7 +262,7 @@ function SbcCard({ sbc, api, onNavigate }) {
             ) : (
               <LayoutGrid size={80} strokeWidth={1} style={{ opacity: 0.2 }} />
             )}
-            {details?.player_card && (
+            {details?.player_card_full && (
               <div style={{ 
                 position: 'absolute', 
                 top: 12, 
@@ -217,12 +275,12 @@ function SbcCard({ sbc, api, onNavigate }) {
                 borderRadius: 6, 
                 zIndex: 3 
               }}>
-                {details.player_card.overall}
+                {details.player_card_full.overall}
               </div>
             )}
           </div>
-        )}
-
+          );
+        })()}
         {/* Right: Info Content */}
         <div style={{ flex: 1, minWidth: '200px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ 

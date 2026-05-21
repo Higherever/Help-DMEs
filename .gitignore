@@ -30,3 +30,9 @@ graphify-out/
 test_player_scrape.py
 update_futbin.py
 
+# Test files and dynamic images
+backend/test.png
+backend/test_out.png
+images/sbcs/
+
+

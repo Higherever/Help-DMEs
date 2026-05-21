@@ -41,14 +41,89 @@ class SBCRewardResponse(BaseModel):
 
 
 class PlayerCardResponse(BaseModel):
-    """Carta de jogador — reward principal de SBC player."""
+    """Carta de jogador — reward principal de SBC player (dados completos)."""
     id: int
     name: str
     overall: int
     position: Optional[str] = None
+    alt_positions: Optional[str] = None
     card_type: Optional[str] = None
-    meta_rating: Optional[float] = None
+
+    # Face stats (6)
+    pace: Optional[int] = None
+    shooting: Optional[int] = None
+    passing: Optional[int] = None
+    dribbling_stat: Optional[int] = None
+    defending: Optional[int] = None
+    physic: Optional[int] = None
+
+    # Sub-atributos detalhados (30)
+    acceleration: Optional[int] = None
+    sprint_speed: Optional[int] = None
+    finishing: Optional[int] = None
+    shot_power: Optional[int] = None
+    long_shots: Optional[int] = None
+    volleys: Optional[int] = None
+    positioning_att: Optional[int] = None
+    short_passing: Optional[int] = None
+    long_passing: Optional[int] = None
+    crossing: Optional[int] = None
+    curve: Optional[int] = None
+    free_kick: Optional[int] = None
+    vision: Optional[int] = None
+    agility: Optional[int] = None
+    balance: Optional[int] = None
+    reactions: Optional[int] = None
+    ball_control: Optional[int] = None
+    composure: Optional[int] = None
+    skill_dribbling: Optional[int] = None
+    interceptions: Optional[int] = None
+    heading: Optional[int] = None
+    marking: Optional[int] = None
+    standing_tackle: Optional[int] = None
+    sliding_tackle: Optional[int] = None
+    jumping: Optional[int] = None
+    stamina: Optional[int] = None
+    strength: Optional[int] = None
+    aggression: Optional[int] = None
+    penalties: Optional[int] = None
+
+    # GK stats
+    gk_diving: Optional[int] = None
+    gk_handling: Optional[int] = None
+    gk_kicking: Optional[int] = None
+    gk_positioning: Optional[int] = None
+    gk_reflexes: Optional[int] = None
+
+    # Metadados
+    skill_moves: Optional[int] = None
+    weak_foot: Optional[int] = None
+    foot: Optional[str] = None
+    height: Optional[int] = None
+    weight: Optional[int] = None
+    age: Optional[int] = None
+    country: Optional[str] = None
+    club_name: Optional[str] = None
+    league_name: Optional[str] = None
+    workrates: Optional[str] = None
+    accelerate_type: Optional[str] = None
+
+    # URLs de CDN
     card_image_url: Optional[str] = None
+    face_url: Optional[str] = None
+    render_url: Optional[str] = None
+    club_logo_url: Optional[str] = None
+    nation_flag_url: Optional[str] = None
+    league_logo_url: Optional[str] = None
+
+    # Meta
+    meta_rating: Optional[float] = None
+    meta_tier: Optional[str] = None
+    playstyles_json: Optional[str] = None
+
+    # IDs cruzados
+    sofifa_id: Optional[int] = None
+    futbin_id: Optional[str] = None
 
 
 class SBCChallengeResponse(BaseModel):
@@ -61,6 +136,46 @@ class SBCChallengeResponse(BaseModel):
     order_index: int = 0
     requirements: List[ChallengeRequirementResponse] = []
     rewards: List[SBCRewardResponse] = []
+
+
+class PlayerCardCompactResponse(BaseModel):
+    """Subset compacto do PlayerCard para exibição no card visual da listagem.
+    Contém apenas os dados necessários para renderizar o card sem precisar 
+    de raw_card_data JSON. Os 30 sub-atributos ficam no PlayerCardResponse completo.
+    """
+    id: int
+    name: str
+    overall: int
+    position: Optional[str] = None
+    alt_positions: Optional[str] = None
+    card_type: Optional[str] = None
+
+    # Face stats (6)
+    pace: Optional[int] = None
+    shooting: Optional[int] = None
+    passing: Optional[int] = None
+    dribbling_stat: Optional[int] = None
+    defending: Optional[int] = None
+    physic: Optional[int] = None
+
+    # Metadados do jogador
+    skill_moves: Optional[int] = None
+    weak_foot: Optional[int] = None
+    workrates: Optional[str] = None
+    accelerate_type: Optional[str] = None
+
+    # URLs visuais
+    card_image_url: Optional[str] = None   # bg do card (HD preferido)
+    face_url: Optional[str] = None         # face low-res fallback
+    render_url: Optional[str] = None       # face HD (CDN Futbin)
+    club_logo_url: Optional[str] = None
+    nation_flag_url: Optional[str] = None
+    league_logo_url: Optional[str] = None
+
+    # Meta rating
+    meta_rating: Optional[float] = None
+    meta_tier: Optional[str] = None
+    playstyles_json: Optional[str] = None
 
 
 class SBCSetResponse(BaseModel):
@@ -82,14 +197,16 @@ class SBCSetResponse(BaseModel):
     is_new: bool = False
     source: str = "futbin"
     scraped_at: Optional[datetime] = None
-    raw_card_data: Optional[str] = None
+    raw_card_data: Optional[str] = None  # DEPRECATED — usar player_card
+    player_card: Optional[PlayerCardCompactResponse] = None  # ← Fonte única de verdade
 
 
 class SBCSetDetailResponse(SBCSetResponse):
     """SBC/DME completo — visão detalhada com challenges e rewards."""
     challenges: List[SBCChallengeResponse] = []
     rewards: List[SBCRewardResponse] = []
-    player_card: Optional[PlayerCardResponse] = None
+    player_card_full: Optional[PlayerCardResponse] = None  # Dados completos (30 sub-stats)
+
 
 
 # ══════════════════════════════════════════════
