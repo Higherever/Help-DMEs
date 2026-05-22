@@ -120,7 +120,9 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
 
       // Acoplamento físico absoluto: ajusta a largura da barra lateral em sincronia com o SVG!
       if (sidebarRef.current) {
-        sidebarRef.current.style.width = `${widthCurrent}px`;
+        // Protege o contêiner físico contra encolhimento abaixo do limite colapsado de 72px,
+        // garantindo que os ícones e avatares nunca sofram cortes ou desalinhamentos ópticos.
+        sidebarRef.current.style.width = `${Math.max(72, widthCurrent)}px`;
       }
 
       animationFrameId = requestAnimationFrame(updatePhysics);
@@ -139,13 +141,11 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
   // Variantes de animação da largura da Sidebar (apenas no desktop)
   const sidebarVariants = {
     expanded: { 
-      x: 0,
       paddingLeft: 16,
       paddingRight: 16,
       transition: { type: 'spring', stiffness: 25, damping: 15 } // Sincronizado com a inércia elástica majestosa!
     },
     collapsed: { 
-      x: 0,
       paddingLeft: 14,
       paddingRight: 14,
       transition: { type: 'spring', stiffness: 25, damping: 15 } // Centralização geométrica perfeita!
