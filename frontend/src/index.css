@@ -387,11 +387,17 @@ body {
   filter: drop-shadow(4px 0 20px rgba(0, 0, 0, 0.65));
 }
 
-#blob-path {
+#blob-path-fill {
   fill: #070709;
+  stroke: none;
+}
+
+#blob-path-stroke {
+  fill: none;
   stroke: var(--accent);
   stroke-width: 1.5px;
   transition: stroke 0.3s ease;
+  filter: drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.65)); /* Efeito brilhante de neon laser dinâmico! */
 }
 
 /* Cabeçalho Unificado (Hambúrguer + Logo) */

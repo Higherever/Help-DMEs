@@ -13,7 +13,8 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
   const [isHovered, setIsHovered] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  const pathRef = useRef(null);
+  const pathFillRef = useRef(null);
+  const pathStrokeRef = useRef(null);
   const sidebarRef = useRef(null);
 
   // Detecta se a tela é mobile para desativar a expansão por hover
@@ -98,10 +99,16 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
       vy = vy * 0.78 + dy * 0.14; // Segue suavemente o Y
       yCurrent += vy;
 
-      // Escreve o path de forma direta no DOM a cada frame do requestAnimationFrame
-      if (pathRef.current) {
-        const d = `M ${widthCurrent},800 H 0 V 0 H ${widthCurrent} C ${widthCurrent},0 ${widthCurrent},${yCurrent - 160} ${widthCurrent + blobXCurrent},${yCurrent - 90} ${widthCurrent + blobXCurrent},${yCurrent} S ${widthCurrent},${yCurrent + 160} ${widthCurrent},800 Z`;
-        pathRef.current.setAttribute('d', d);
+      // Escreve os caminhos de forma direta no DOM a cada frame do requestAnimationFrame para máxima performance
+      const d_fill = `M ${widthCurrent},0 L ${widthCurrent},${yCurrent - 150} C ${widthCurrent},${yCurrent - 70} ${widthCurrent + blobXCurrent},${yCurrent - 60} ${widthCurrent + blobXCurrent},${yCurrent} S ${widthCurrent},${yCurrent + 70} ${widthCurrent},${yCurrent + 150} L ${widthCurrent},800 H 0 V 0 Z`;
+      
+      const d_stroke = `M 0,0 V 800 M ${widthCurrent},0 L ${widthCurrent},${yCurrent - 150} C ${widthCurrent},${yCurrent - 70} ${widthCurrent + blobXCurrent},${yCurrent - 60} ${widthCurrent + blobXCurrent},${yCurrent} S ${widthCurrent},${yCurrent + 70} ${widthCurrent},${yCurrent + 150} L ${widthCurrent},800`;
+
+      if (pathFillRef.current) {
+        pathFillRef.current.setAttribute('d', d_fill);
+      }
+      if (pathStrokeRef.current) {
+        pathStrokeRef.current.setAttribute('d', d_stroke);
       }
 
       animationFrameId = requestAnimationFrame(updatePhysics);
@@ -164,7 +171,8 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
         {/* SVG do blob elástico de fundo (renderizado apenas no desktop) */}
         {!isMobile && (
           <svg id="blob" viewBox="0 0 320 800" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-            <path ref={pathRef} id="blob-path" d="M 72,800 H 0 V 0 H 72 Z" />
+            <path ref={pathFillRef} id="blob-path-fill" d="M 72,0 L 72,800 H 0 V 0 Z" />
+            <path ref={pathStrokeRef} id="blob-path-stroke" d="M 0,0 V 800 M 72,0 L 72,800" />
           </svg>
         )}
 
