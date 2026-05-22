@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApi } from '../../hooks/useApi';
+import GooeySearch from '../Search/GooeySearch';
 
 const thStyle = { padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.04em' };
 const tdStyle = { padding: '10px 16px', color: 'var(--text-primary)' };
@@ -26,9 +27,9 @@ export default function SquadPage({ squadStats, onImportCSV }) {
 
   useEffect(() => { loadSquad(); }, []);
 
-  const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
-    loadSquad(e.target.value);
+  const handleSearch = (val) => {
+    setSearchTerm(val);
+    loadSquad(val);
   };
 
   const handleFileDrop = async (e) => {
@@ -81,20 +82,15 @@ export default function SquadPage({ squadStats, onImportCSV }) {
       {/* Tabela do elenco */}
       {hasSquad && (
         <>
-          <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-            <input
-              type="text"
-              placeholder="🔍 Buscar jogador..."
+          <div style={{ display: 'flex', gap: 12, marginBottom: 16, width: '100%', maxWidth: '320px' }}>
+            <GooeySearch
               value={searchTerm}
               onChange={handleSearch}
-              style={{
-                flex: 1, padding: '10px 16px', borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--border)', background: 'var(--bg-tertiary)',
-                color: 'var(--text-primary)', fontFamily: 'var(--font-main)',
-                fontSize: '0.9rem', outline: 'none',
-              }}
+              placeholder="Buscar jogador..."
+              suggestions={['Ouro', 'Especial', 'ATA', 'MEI', 'DFE', 'GOL']}
             />
           </div>
+
 
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>

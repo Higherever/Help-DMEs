@@ -16,6 +16,8 @@ import {
 import { useApi } from '../hooks/useApi';
 import FutbinCard from '../components/FutbinCard';
 import FutbinCardTilt from '../components/FutbinCardTilt';
+import GooeySearch from '../components/Search/GooeySearch';
+
 
 // Componente SbcCard separado para gerenciar estado de expansão
 function SbcCard({ sbc, api, onNavigate }) {
@@ -1178,16 +1180,14 @@ export default function SbcsPage({ onNavigate }) {
       <div className="command-center-filters">
         <div className="filters-row-primary">
           
-          {/* Busca Futurista */}
-          <div className="filters-search-wrapper">
-            <input 
-              type="text" 
-              placeholder="🔍 Buscar DMEs por nome..." 
-              className="filters-search-input"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+          {/* Busca Futurista com Efeito Gooey Viscoso e Elástico */}
+          <GooeySearch 
+            value={searchTerm} 
+            onChange={setSearchTerm} 
+            placeholder="Buscar DMEs por nome..." 
+            suggestions={['Melhoria', '83+', 'Ícone', 'Elenco', 'Desafio', 'Campanha']}
+          />
+
 
           {/* Chicletes de Categoria Neon */}
           <div className="category-pills-container">

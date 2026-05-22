@@ -91,8 +91,7 @@ export default function App() {
   };
 
   const renderPage = () => {
-    const pageProps = {
-      key: activePage,
+    const pageAnimation = {
       initial: { opacity: 0, y: 10 },
       animate: { opacity: 1, y: 0 },
       exit: { opacity: 0, y: -10 },
@@ -101,17 +100,17 @@ export default function App() {
 
     switch (activePage) {
       case 'dashboard':
-        return <motion.div {...pageProps}><Dashboard squadStats={squadStats} scrapeStatus={scrapeStatus} onNavigate={setActivePage} /></motion.div>;
+        return <motion.div key={activePage} {...pageAnimation}><Dashboard squadStats={squadStats} scrapeStatus={scrapeStatus} onNavigate={setActivePage} /></motion.div>;
       case 'squad':
-        return <motion.div {...pageProps}><SquadPage squadStats={squadStats} onImportCSV={handleImportCSV} onNavigate={setActivePage} /></motion.div>;
+        return <motion.div key={activePage} {...pageAnimation}><SquadPage squadStats={squadStats} onImportCSV={handleImportCSV} onNavigate={setActivePage} /></motion.div>;
       case 'sbcs':
-        return <motion.div {...pageProps}><SbcsPage onNavigate={setActivePage} /></motion.div>;
+        return <motion.div key={activePage} {...pageAnimation}><SbcsPage onNavigate={setActivePage} /></motion.div>;
       case 'calculator':
-        return <motion.div {...pageProps}><CalculatorPage onNavigate={setActivePage} /></motion.div>;
+        return <motion.div key={activePage} {...pageAnimation}><CalculatorPage onNavigate={setActivePage} /></motion.div>;
       case 'settings':
-        return <motion.div {...pageProps}><SettingsPage onNavigate={setActivePage} /></motion.div>;
+        return <motion.div key={activePage} {...pageAnimation}><SettingsPage onNavigate={setActivePage} /></motion.div>;
       default:
-        return <motion.div {...pageProps}><Dashboard squadStats={squadStats} scrapeStatus={scrapeStatus} onNavigate={setActivePage} /></motion.div>;
+        return <motion.div key={activePage} {...pageAnimation}><Dashboard squadStats={squadStats} scrapeStatus={scrapeStatus} onNavigate={setActivePage} /></motion.div>;
     }
   };
 
