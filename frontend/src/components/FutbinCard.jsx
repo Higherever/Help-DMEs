@@ -24,6 +24,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
  */
 const FutbinCard = ({ data, size = 'lg', className = '', showDetails = false }) => {
   const [expanded, setExpanded] = useState(showDetails);
+  const [hovered, setHovered] = useState(false);
 
   if (!data) {
     return (
@@ -40,30 +41,18 @@ const FutbinCard = ({ data, size = 'lg', className = '', showDetails = false }) 
 
   // ── URLs com fallback ──
   const bgUrl = data.bg_url_hd || data.bg_url || '';
-  const faceUrl = data.face_url_hd || data.render_url || data.face_url || '';
-  const nationUrl = data.nation_url || data.nation_flag_url || '';
-  const clubUrl = data.club_url || data.club_logo_url || '';
-  const leagueUrl = data.league_url || data.league_logo_url || '';
-  const stats = data.stats || [];
 
   const formatName = (str) => {
     if (!str) return '';
     return str.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
   };
   const name = formatName(data.name);
-  const rating = data.rating || data.overall || '';
-  const position = data.position || '';
 
   // ── Playstyles ──
   let playstyles = data.playstyles || [];
   if (typeof data.playstyles_json === 'string' && !playstyles.length) {
     try { playstyles = JSON.parse(data.playstyles_json); } catch { playstyles = []; }
   }
-
-  // ── Alt positions ──
-  const altPositions = data.alt_positions
-    ? data.alt_positions.split(',').map(p => p.trim()).filter(Boolean)
-    : [];
 
   // ── Sub-atributos ──
   const subStats = buildSubStats(data);
@@ -72,83 +61,28 @@ const FutbinCard = ({ data, size = 'lg', className = '', showDetails = false }) 
   return (
     <div className={`futbin-card-wrapper card-${size} ${className}`}>
 
-      {/* ═══ Card Visual — 12 Camadas CSS Puras ═══ */}
-      <div className="futbin-card">
-
-        {/* Camada 1: Background Template */}
+      {/* ═══ Card Visual ═══ */}
+      <div 
+        className="futbin-card"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
         {bgUrl && (
           <img
             className="futbin-card-bg"
             src={bgUrl}
-            alt=""
-            loading="lazy"
-            referrerPolicy="no-referrer"
-            draggable={false}
-          />
-        )}
-
-        {/* Camada 2: Face/Render do Jogador */}
-        {faceUrl && (
-          <img
-            className="futbin-card-face"
-            src={faceUrl}
             alt={name}
-            loading="lazy"
+            loading="eager"
             referrerPolicy="no-referrer"
             draggable={false}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              borderRadius: 'inherit',
+            }}
           />
         )}
-
-        {/* Camada 3: Sombra inferior para legibilidade */}
-        <div className="futbin-card-bottom-shadow" />
-
-        {/* Camada 4-5: Rating + Posição */}
-        <div className="futbin-card-info">
-          <div className="futbin-card-rating">{rating}</div>
-          <div className="futbin-card-position">{position}</div>
-        </div>
-
-        {/* Camada 6: Posições Alternativas */}
-        {altPositions.length > 0 && (
-          <div className="futbin-card-alt-pos">
-            {altPositions.map((p, i) => (
-              <span key={i}>{p}</span>
-            ))}
-          </div>
-        )}
-
-        {/* Camada 7: Foot & Skill Moves / Weak Foot */}
-        {(data.foot || data.skill_moves || data.weak_foot) && (
-          <div className="futbin-card-side-badges">
-            {data.foot && <span className="side-badge-foot">{data.foot.charAt(0).toUpperCase()}</span>}
-            <span className="side-badge-smwf">{data.skill_moves || '-'}★{data.weak_foot || '-'}</span>
-          </div>
-        )}
-
-        {/* Camada 8: Nome do Jogador */}
-        <div className="futbin-card-name">{name}</div>
-
-        {/* Camada 9: Linha Divisória */}
-        <div className="futbin-card-divider" />
-
-        {/* Camada 10: 6 Face Stats */}
-        {stats.length > 0 && (
-          <div className="futbin-card-stats-row">
-            {stats.slice(0, 6).map((s, i) => (
-              <div key={i} className="futbin-card-stat">
-                <span className="stat-lbl">{s.name}</span>
-                <span className="stat-val">{s.value}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Camada 11: Badges (Nação, Liga, Clube) */}
-        <div className="futbin-card-badges">
-          {nationUrl && <img className="badge-nation" src={nationUrl} alt="Nation" loading="lazy" referrerPolicy="no-referrer" />}
-          {leagueUrl && <img className="badge-league" src={leagueUrl} alt="League" loading="lazy" referrerPolicy="no-referrer" />}
-          {clubUrl && <img className="badge-club" src={clubUrl} alt="Club" loading="lazy" referrerPolicy="no-referrer" />}
-        </div>
       </div>
 
       {/* ═══ Camada 12: Playstyles (fora do card, flutuante esquerda) ═══ */}
@@ -161,12 +95,6 @@ const FutbinCard = ({ data, size = 'lg', className = '', showDetails = false }) 
           ))}
         </div>
       )}
-
-      {/* ═══ Footer compacto abaixo do card (Oculto pois o estilo agora é integrado) ═══ */}
-      <div className="futbin-card-meta-bottom">
-        <span className="meta-bottom-pos">{position}</span>
-        <span className="meta-bottom-val">{data.meta_rating || rating}</span>
-      </div>
 
       {/* ═══ Sub-atributos expandíveis ═══ */}
       {hasSubStats && (

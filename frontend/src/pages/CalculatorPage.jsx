@@ -12,6 +12,92 @@ import {
   Package as Box
 } from 'lucide-react';
 import { useApi } from '../hooks/useApi';
+import FutbinCard from '../components/FutbinCard';
+
+function SuggestedPlayerCard({ player, assignedPosition }) {
+  const api = useApi();
+  const [cardImage, setCardImage] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    const fetchImage = async () => {
+      try {
+        const data = await api.get(
+          `/api/cards/search-image?name=${encodeURIComponent(player.name)}&league=${encodeURIComponent(player.league || '')}&team=${encodeURIComponent(player.team || '')}`
+        );
+        if (active) {
+          setCardImage(data);
+        }
+      } catch (err) {
+        // Log leve de erro para não poluir o console do frontend caso algum jogador não tenha screenshot de card no BD
+        console.debug("Card não encontrado no BD para", player.name);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+    fetchImage();
+    return () => {
+      active = false;
+    };
+  }, [player.name, player.league, player.team, api]);
+
+  const getPlayerPhotoUrl = (definitionId) => {
+    if (!definitionId) return null;
+    return `https://feeds.content.ea.com/content/fame/fc25/common/card-assets/player-faces/p${definitionId}.png`;
+  };
+
+  const getImageUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url.replace('cdn3.futbin.com', 'cdn.futbin.com');
+    if (url.startsWith('/')) return `${api.API_BASE}${url}`;
+    return `${api.API_BASE}/${url}`;
+  };
+
+  if (!loading && cardImage && cardImage.full_image_url) {
+    const cardData = {
+      name: player.name,
+      rating: player.rating,
+      position: assignedPosition || player.position || '',
+      bg_url_hd: getImageUrl(cardImage.full_image_url),
+    };
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', width: 45, height: 63, position: 'relative' }}>
+        <FutbinCard data={cardData} size="xs" />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ position: 'relative', width: 42, height: 52 }}>
+      <div style={{ 
+        position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
+        background: 'rgba(255,255,255,0.05)', borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)' 
+      }}>
+        {player.definition_id ? (
+          <img 
+            src={getPlayerPhotoUrl(player.definition_id)} 
+            alt="" 
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+          />
+        ) : null}
+        <div style={{ display: player.definition_id ? 'none' : 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+          <UserIcon size={20} style={{ opacity: 0.3 }} />
+        </div>
+      </div>
+      <div style={{ 
+        position: 'absolute', bottom: -4, right: -4, width: 22, height: 22, 
+        borderRadius: '50%', background: '#000', border: '1px solid var(--accent)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 900, color: 'var(--accent)', zIndex: 2
+      }}>
+        {player.rating}
+      </div>
+    </div>
+  );
+}
 
 export default function CalculatorPage() {
   const api = useApi();
@@ -295,30 +381,8 @@ export default function CalculatorPage() {
                       <tbody>
                         {step.suggested_players.map(sp => (
                           <tr key={sp.player.id} className="table-row-hover" style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
-                            <td style={{ padding: '10px 12px' }}>
-                              <div style={{ position: 'relative', width: 42, height: 52 }}>
-                                 <div style={{ 
-                                   position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
-                                   background: 'rgba(255,255,255,0.05)', borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)' 
-                                 }}>
-                                    <img 
-                                      src={getPlayerPhotoUrl(sp.player.definition_id)} 
-                                      alt="" 
-                                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                                      onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-                                    />
-                                    <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
-                                       <UserIcon size={20} style={{ opacity: 0.3 }} />
-                                    </div>
-                                 </div>
-                                 <div style={{ 
-                                   position: 'absolute', bottom: -4, right: -4, width: 22, height: 22, 
-                                   borderRadius: '50%', background: '#000', border: '1px solid var(--accent)',
-                                   display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 900, color: 'var(--accent)', zIndex: 2
-                                 }}>
-                                    {sp.player.rating}
-                                 </div>
-                              </div>
+                            <td style={{ padding: '10px 12px', width: 60, verticalAlign: 'middle' }}>
+                              <SuggestedPlayerCard player={sp.player} assignedPosition={sp.assigned_position} />
                             </td>
                             <td style={{ padding: '10px 12px' }}>
                               <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{sp.player.name}</div>

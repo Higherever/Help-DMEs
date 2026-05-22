@@ -23,7 +23,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database import init_db, get_session_dependency
-from backend.models.models import SBCSet, SBCChallenge, ScrapeLog
+from backend.models.models import SBCSet, SBCChallenge, ScrapeLog, PlayerCard, FCPlayer
 
 from backend.schemas.schemas import (
     AppSettingResponse, AppSettingUpdateRequest,
@@ -214,6 +214,94 @@ async def bulk_include_players(session: AsyncSession = Depends(get_session_depen
         affected=affected,
         message=f"{affected} jogadores reincluídos.",
     )
+
+
+# ══════════════════════════════════════════════
+#  CARDS — Busca de Imagens de Cards e Miniaturas
+# ══════════════════════════════════════════════
+
+@app.get("/api/cards/search-image")
+async def search_card_image(
+    name: str = Query(..., description="Nome do jogador para buscar"),
+    league: Optional[str] = Query(None, description="Liga do jogador para maior precisão"),
+    team: Optional[str] = Query(None, description="Time/Clube do jogador para maior precisão"),
+    session: AsyncSession = Depends(get_session_dependency),
+):
+    """
+    Busca na base de dados (player_cards e fc_players) e retorna o caminho
+    do card completo (HD) e sua respectiva miniatura (Small) de 150px.
+    """
+    # Função interna para realizar a busca no banco
+    async def try_search(exact_match: bool):
+        # 1. Buscar primeiro na tabela player_cards (DMEs)
+        query_pc = select(PlayerCard).where(PlayerCard.card_image_url != None)
+        
+        # Filtro de nome case-insensitive parcial
+        query_pc = query_pc.where(
+            func.lower(PlayerCard.name).like(f"%{name.lower()}%")
+        )
+        
+        if exact_match:
+            if league:
+                query_pc = query_pc.where(
+                    func.lower(PlayerCard.league_name).like(f"%{league.lower()}%")
+                )
+            if team:
+                query_pc = query_pc.where(
+                    func.lower(PlayerCard.club_name).like(f"%{team.lower()}%")
+                )
+                
+        result_pc = await session.execute(query_pc)
+        pc_player = result_pc.scalars().first()
+        if pc_player:
+            return pc_player.card_image_url
+
+        # 2. Buscar depois na tabela fc_players (Catálogo Global)
+        query_fc = select(FCPlayer).where(FCPlayer.card_template_url != None)
+        
+        # Filtro de nome case-insensitive parcial
+        query_fc = query_fc.where(
+            func.lower(FCPlayer.name).like(f"%{name.lower()}%")
+        )
+        
+        if exact_match:
+            if league:
+                query_fc = query_fc.where(
+                    func.lower(FCPlayer.league).like(f"%{league.lower()}%")
+                )
+            if team:
+                query_fc = query_fc.where(
+                    func.lower(FCPlayer.club).like(f"%{team.lower()}%")
+                )
+                
+        result_fc = await session.execute(query_fc)
+        fc_player = result_fc.scalars().first()
+        if fc_player:
+            return fc_player.card_template_url
+            
+        return None
+
+    # Tenta busca exata (Nome + Liga + Clube)
+    card_path = await try_search(exact_match=True)
+    
+    # Se falhar e tivermos mais dados (liga ou clube), tenta fallback buscando apenas por Nome
+    if not card_path and (league or team):
+        card_path = await try_search(exact_match=False)
+        
+    if not card_path:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Nenhum card correspondente encontrado para o jogador '{name}'."
+        )
+
+    # Deduzir caminho da miniatura (small) substituindo '/full/' por '/small/'
+    # Ex: /images/cards/full/sbc_player_1_nome.png -> /images/cards/small/sbc_player_1_nome.png
+    small_path = card_path.replace("/full/", "/small/")
+
+    return {
+        "full_image_url": card_path,
+        "small_image_url": small_path
+    }
 
 
 # ══════════════════════════════════════════════

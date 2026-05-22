@@ -30,7 +30,9 @@ from backend.models.models import (
     SBCSet, SBCChallenge, ChallengeRequirement,
     SBCReward, PlayerCard, ScrapeLog,
 )
-from backend.services.image_processor import download_and_process_card_bg
+from backend.services.image_processor import download_and_process_card_bg, remove_white_background_inplace
+from backend.services.card_screenshot import CardScreenshotService
+from backend.services.translation_service import translator
 
 logger = logging.getLogger("help_dmes.futbin")
 
@@ -573,7 +575,10 @@ async def scrape_all_sbcs(db: AsyncSession) -> dict:
     scraped_count = 0
     errors = []
 
+    screenshot_service = CardScreenshotService()
+
     try:
+        await screenshot_service.start()
         timeout = aiohttp.ClientTimeout(total=120)
         connector = aiohttp.TCPConnector(limit=MAX_CONCURRENT, force_close=True)
         async with aiohttp.ClientSession(timeout=timeout, connector=connector) as http:
@@ -620,7 +625,7 @@ async def scrape_all_sbcs(db: AsyncSession) -> dict:
                     _scrape_state["message"] = f"Processando {i+1}/{len(all_sbcs)}: {sbc_data['name']}"
 
                     try:
-                        await _process_single_sbc(http, db, sbc_data)
+                        await _process_single_sbc(http, db, sbc_data, screenshot_service)
                         scraped_count += 1
                     except Exception as e:
                         error_msg = f"Erro em '{sbc_data['name']}': {e}"
@@ -664,6 +669,8 @@ async def scrape_all_sbcs(db: AsyncSession) -> dict:
         db.add(log)
         await db.commit()
         return {"status": "failed", "scraped": scraped_count, "error": str(e)}
+    finally:
+        await screenshot_service.close()
 
 
 
@@ -696,9 +703,15 @@ async def _fetch_and_parse_player(session: aiohttp.ClientSession, url: str) -> d
         club = soup.select_one('img[src*="clubs/"]')
         league = soup.select_one('img[src*="cards/tiny/"]') # some leagues have "leagues_live" etc.
         
-        if nation: data['nation_url'] = nation.get('src', '')
-        if club: data['club_url'] = club.get('src', '')
-        if league: data['league_url'] = league.get('src', '')
+        if nation:
+            data['nation_url'] = nation.get('src', '')
+            data['nation_name'] = (nation.get('title') or nation.get('alt') or nation.get('data-original-title') or '').strip()
+        if club:
+            data['club_url'] = club.get('src', '')
+            data['club_name'] = (club.get('title') or club.get('alt') or club.get('data-original-title') or '').strip()
+        if league:
+            data['league_url'] = league.get('src', '')
+            data['league_name'] = (league.get('title') or league.get('alt') or league.get('data-original-title') or '').strip()
         
         # 3. Playstyles
         ps_elements = soup.select('.playstyle-icon')
@@ -737,7 +750,7 @@ async def _fetch_and_parse_player(session: aiohttp.ClientSession, url: str) -> d
 
 
 async def _process_single_sbc(
-    http: aiohttp.ClientSession, db: AsyncSession, sbc_data: dict
+    http: aiohttp.ClientSession, db: AsyncSession, sbc_data: dict, screenshot_service: CardScreenshotService = None
 ):
     """Processa um SBC individual: busca detalhes, imagens, persiste."""
     sbc_id = sbc_data["futbin_id"]
@@ -759,15 +772,15 @@ async def _process_single_sbc(
     # Criar SBCSet
     sbc_set = SBCSet(
         futgg_id=f"futbin-{sbc_id}",
-        name=sbc_data["name"],
-        description=detail.get("description", ""),
+        name=translator.translate(sbc_data["name"]),
+        description=translator.translate(detail.get("description", "")),
         category=category,
         total_cost=detail.get("total_cost_ps"),
         challenges_count=len(detail.get("challenges", [])),
         is_repeatable=False,
         is_new=sbc_data.get("is_new", False),
         image_url=local_image or sbc_data.get("image_url", ""),
-        expires_text=sbc_data.get("expires_text", ""),
+        expires_text=translator.translate(sbc_data.get("expires_text", "")),
         raw_card_data=sbc_data.get("raw_card_data", None),
         scraped_at=datetime.now(UTC),
         source="futbin",
@@ -779,8 +792,8 @@ async def _process_single_sbc(
     for idx, ch_data in enumerate(detail.get("challenges", [])):
         challenge = SBCChallenge(
             sbc_set_id=sbc_set.id,
-            name=ch_data.get("name", f"Challenge {idx+1}"),
-            description=ch_data.get("description", ""),
+            name=translator.translate(ch_data.get("name", f"Challenge {idx+1}")),
+            description=translator.translate(ch_data.get("description", "")),
             estimated_cost=ch_data.get("estimated_cost_ps"),
             order_index=idx,
         )
@@ -794,7 +807,7 @@ async def _process_single_sbc(
                 requirement_type=req_data["requirement_type"],
                 operator=req_data["operator"],
                 value=str(req_data["value"]),
-                detail=req_data.get("detail"),
+                detail=translator.translate(req_data.get("detail")) if req_data.get("detail") else None,
             )
             db.add(req)
 
@@ -803,7 +816,7 @@ async def _process_single_sbc(
             reward = SBCReward(
                 challenge_id=challenge.id,
                 reward_type="pack",
-                name=ch_data["reward_name"],
+                name=translator.translate(ch_data["reward_name"]),
                 is_untradeable="untradeable" in ch_data.get("reward_name", "").lower(),
                 image_url=ch_data.get("reward_image", ""),
             )
@@ -860,13 +873,14 @@ async def _process_single_sbc(
             await asyncio.sleep(DELAY_BETWEEN)
             hd_data = await _fetch_and_parse_player(http, player_url)
             if hd_data:
-                # URLs HD (sobrescreve as de baixa res)
-                if hd_data.get('bg_url_hd'):
-                    local_bg_path = await download_and_process_card_bg(hd_data['bg_url_hd'], sbc_set.id, http)
-                    player_card.card_image_url = local_bg_path if local_bg_path else hd_data['bg_url_hd']
-                if hd_data.get('face_url_hd'):
-                    player_card.render_url = hd_data['face_url_hd']
-                
+                # Preencher dados enriquecidos
+                if hd_data.get('nation_name'):
+                    player_card.country = hd_data['nation_name']
+                if hd_data.get('club_name'):
+                    player_card.club_name = hd_data['club_name']
+                if hd_data.get('league_name'):
+                    player_card.league_name = hd_data['league_name']
+
                 # Badges CDN
                 if hd_data.get('nation_url'):
                     player_card.nation_flag_url = hd_data['nation_url']
@@ -874,8 +888,6 @@ async def _process_single_sbc(
                     player_card.club_logo_url = hd_data['club_url']
                 if hd_data.get('league_url'):
                     player_card.league_logo_url = hd_data['league_url']
-                
-                # Metadados do jogador
                 if hd_data.get('alt_positions'):
                     player_card.alt_positions = hd_data['alt_positions']
                 if hd_data.get('skill_moves'):
@@ -888,6 +900,97 @@ async def _process_single_sbc(
                     player_card.workrates = hd_data['workrates']
                 if hd_data.get('playstyles'):
                     player_card.playstyles_json = json.dumps(hd_data['playstyles'])
+
+                # Compor nome do arquivo físico sanitizado
+                from backend.services.scraping_utils import sanitize_filename_part, create_thumbnail
+                from backend.services.image_processor import remove_white_background_inplace
+                import re
+                from typing import Optional
+                s_name = sanitize_filename_part(player_card.name)
+                s_league = sanitize_filename_part(player_card.league_name or "unknown_league")
+                s_country = sanitize_filename_part(player_card.country or "unknown_country")
+                s_club = sanitize_filename_part(player_card.club_name or "unknown_club")
+                
+                filename = f"sbc_player_{sbc_set.id}_{s_name}_{s_league}_{s_country}_{s_club}.png"
+                local_full_path = f"images/cards/full/{filename}"
+                local_small_path = f"images/cards/small/{filename}"
+                
+                from backend.core.database import PROJECT_ROOT
+                abs_full_path = PROJECT_ROOT / local_full_path
+                abs_small_path = PROJECT_ROOT / local_small_path
+                success = False
+                # Capturar screenshot do card completo se o serviço estiver ativo
+                if screenshot_service:
+                    success = await screenshot_service.take_card_screenshot(player_url, str(abs_full_path))
+                    if success:
+                        # Remover fundo branco do screenshot capturado
+                        logger.info(f"Removendo fundo branco da imagem capturada por screenshot para {player_card.name}...")
+                        try:
+                            await remove_white_background_inplace(abs_full_path)
+                        except Exception as e:
+                            logger.error(f"Erro ao remover fundo branco do screenshot: {e}")
+
+                        player_card.card_image_url = f"/images/cards/full/{filename}"
+                        player_card.render_url = None
+                        # Criar miniatura física
+                        create_thumbnail(str(abs_full_path), str(abs_small_path), width=150)
+                    else:
+                        logger.warning(f"Falha ao tirar screenshot do card completo para {player_url}")
+
+                # ── Fallback Premium do FutGG se o screenshot falhar ou não estiver ativo ──
+                if not success:
+                    logger.info(f"Iniciando fallback premium do FutGG para {player_card.name}...")
+                    try:
+                        # Extrair o ea_item_id
+                        def extract_ea_id(url_str: str) -> Optional[str]:
+                            if not url_str: return None
+                            m = re.search(r'/players/p?(\d+)\.png', url_str)
+                            if m: return m.group(1)
+                            m_alt = re.search(r'/(\d+)\.png', url_str)
+                            if m_alt: return m_alt.group(1)
+                            return None
+
+                        ea_item_id = extract_ea_id(player_card.render_url) or extract_ea_id(player_card.face_url) or extract_ea_id(hd_data.get('face_url_hd'))
+                        if ea_item_id:
+                            logger.info(f"EA Item ID extraído: {ea_item_id}. Buscando no FutGG...")
+                            
+                            from backend.scripts.scrape_players_v2 import scrape_futgg_card_image, download_image
+                            futgg_data = await scrape_futgg_card_image(
+                                session=http,
+                                player_name=player_card.name,
+                                overall=player_card.overall,
+                                futbin_id=player_card.futbin_id or ea_item_id,
+                                ea_item_id=ea_item_id
+                            )
+                            
+                            hd_url = futgg_data.get("futgg_card_image_url")
+                            if hd_url:
+                                logger.info(f"Card consolidado HD encontrado no FutGG: {hd_url}")
+                                
+                                # Fazer download físico
+                                abs_full_path.parent.mkdir(parents=True, exist_ok=True)
+                                download_success = await download_image(http, hd_url, abs_full_path)
+                                if download_success:
+                                    # Remover fundo branco
+                                    logger.info("Removendo fundo branco da imagem baixada do FutGG...")
+                                    try:
+                                        await remove_white_background_inplace(abs_full_path)
+                                    except Exception as e:
+                                        logger.error(f"Erro ao remover fundo branco do fallback: {e}")
+                                    
+                                    player_card.card_image_url = f"/images/cards/full/{filename}"
+                                    player_card.render_url = None
+                                    
+                                    # Criar miniatura
+                                    create_thumbnail(str(abs_full_path), str(abs_small_path), width=150)
+                                    success = True
+                                    logger.info(f"✅ Fallback premium concluído com sucesso para {player_card.name}!")
+                            else:
+                                logger.warning(f"Card consolidado HD não encontrado no FutGG para {player_card.name}")
+                        else:
+                            logger.warning(f"Não foi possível extrair ea_item_id para {player_card.name}")
+                    except Exception as fallback_err:
+                        logger.error(f"Erro no fallback do FutGG para {player_card.name}: {fallback_err}")
 
                 # Manter raw_card_data atualizado (backward-compat para frontend)
                 current_raw = dict(initial_data)

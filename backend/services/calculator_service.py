@@ -117,13 +117,13 @@ def _meets_requirement(player: UserSquadPlayer, req: ChallengeRequirement, rarit
         rm = rarity_map.get(player.rarity.lower()) if rarity_map else None
         
         if rm:
-            if "gold" in quality: return rm.is_gold
-            if "silver" in quality: return not rm.is_gold and player.rating >= 65
+            if "gold" in quality or "ouro" in quality: return rm.is_gold
+            if "silver" in quality or "prata" in quality: return not rm.is_gold and player.rating >= 65
             if "bronze" in quality: return player.rating < 65
         
         # Fallback se não encontrar no mapa ou mapa não provido
-        if "gold" in quality: return player.rating >= 75
-        if "silver" in quality: return 65 <= player.rating < 75
+        if "gold" in quality or "ouro" in quality: return player.rating >= 75
+        if "silver" in quality or "prata" in quality: return 65 <= player.rating < 75
         if "bronze" in quality: return player.rating < 65
         return False
     
@@ -132,11 +132,11 @@ def _meets_requirement(player: UserSquadPlayer, req: ChallengeRequirement, rarit
         rm = rarity_map.get(player.rarity.lower()) if rarity_map else None
         
         if rm:
-            if "rare" in rarity_detail: return rm.is_rare
-            if "common" in rarity_detail: return not rm.is_rare
+            if "rare" in rarity_detail or "raro" in rarity_detail: return rm.is_rare
+            if "common" in rarity_detail or "comum" in rarity_detail: return not rm.is_rare
             
         # Fallback ou match direto por string
-        return rarity_detail in player.rarity.lower()
+        return (rarity_detail in player.rarity.lower()) or (player.rarity.lower() in rarity_detail)
 
     if req.requirement_type == "player_type":
         type_detail = req.detail.upper() if req.detail else ""
@@ -146,7 +146,7 @@ def _meets_requirement(player: UserSquadPlayer, req: ChallengeRequirement, rarit
             if "TOTW" in type_detail: return rm.is_totw
             if "TOTS" in type_detail: return rm.is_tots
             
-        return type_detail in player.rarity.upper()
+        return (type_detail in player.rarity.upper()) or (player.rarity.upper() in type_detail)
         
     if req.requirement_type == "players_from_league":
         return (req.detail and req.detail.lower() in player.league.lower())

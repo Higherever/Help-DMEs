@@ -25,8 +25,13 @@ async def download_and_process_card_bg(url: str, sbc_id: str, http_session: aioh
     if not url:
         return ""
         
-    # Limpar a URL
+    # Limpar a URL para determinar a extensão ou nome do arquivo
     clean_url = url.split("?")[0] if "?" in url else url
+    
+    # URL de download real que preserva os parâmetros de assinatura de imagem (essencial para CDN/Imgix)
+    download_url = url
+    if download_url.startswith("//"):
+        download_url = "https:" + download_url
     if clean_url.startswith("//"):
         clean_url = "https:" + clean_url
         
@@ -57,7 +62,10 @@ async def download_and_process_card_bg(url: str, sbc_id: str, http_session: aioh
             http_session = aiohttp.ClientSession(timeout=timeout)
             close_session = True
             
-        async with http_session.get(clean_url) as resp:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        }
+        async with http_session.get(download_url, headers=headers) as resp:
             if resp.status != 200:
                 logger.error(f"Erro ao baixar bg card {clean_url}: status {resp.status}")
                 return ""
@@ -112,3 +120,53 @@ async def download_and_process_card_bg(url: str, sbc_id: str, http_session: aioh
         if os.path.exists(temp_out): 
             try: os.remove(temp_out) 
             except: pass
+
+
+async def remove_white_background_inplace(image_path: Path) -> bool:
+    """
+    Remove o fundo branco de uma imagem de card física (inplace) usando ImageMagick.
+    Usa preenchimento por inundação (floodfill) a partir dos 4 cantos com fuzz de 10%.
+    """
+    if not image_path.exists():
+        logger.error(f"Arquivo não encontrado para remoção de fundo branco: {image_path}")
+        return False
+
+    fd_out, temp_out = tempfile.mkstemp(suffix=".png")
+    os.close(fd_out)
+
+    try:
+        cmd = [
+            "magick",
+            str(image_path),
+            "-fuzz", "10%",
+            "-fill", "none",
+            "-draw", "color 0,0 floodfill",
+            "-gravity", "NorthEast", "-draw", "color 0,0 floodfill",
+            "-gravity", "SouthWest", "-draw", "color 0,0 floodfill",
+            "-gravity", "SouthEast", "-draw", "color 0,0 floodfill",
+            temp_out
+        ]
+
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+
+        if process.returncode != 0:
+            logger.error(f"ImageMagick falhou ao remover fundo branco de {image_path}: {stderr.decode()}")
+            return False
+        
+        # Substitui a imagem original pela versão sem fundo
+        shutil.move(temp_out, str(image_path))
+        logger.info(f"Fundo branco removido com sucesso para {image_path}")
+        return True
+    except Exception as e:
+        logger.error(f"Erro ao remover fundo branco para {image_path}: {e}")
+        return False
+    finally:
+        if os.path.exists(temp_out):
+            try: os.remove(temp_out)
+            except: pass
+

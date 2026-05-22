@@ -1,0 +1,16 @@
+{
+  "name": "fc-card-generator",
+  "version": "1.0.0",
+  "description": "Offline Card Builder for EA FC 26 using @napi-rs/canvas",
+  "main": "generate.js",
+  "type": "module",
+  "scripts": {
+    "start": "node generate.js"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "^0.1.65",
+    "axios": "^1.7.9",
+    "cors": "^2.8.5",
+    "express": "^4.21.1"
+  }
+}

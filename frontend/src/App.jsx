@@ -11,6 +11,7 @@ import SbcsPage from './pages/SbcsPage';
 import SettingsPage from './pages/SettingsPage';
 import CalculatorPage from './pages/CalculatorPage';
 import { useApi } from './hooks/useApi';
+import InteractiveBackground from './components/Layout/InteractiveBackground';
 
 export default function App() {
   const api = useApi();
@@ -89,10 +90,6 @@ export default function App() {
     settings: 'Configurações',
   };
 
-  if (showLanding) {
-    return <LandingPage onStart={handleStart} />;
-  }
-
   const renderPage = () => {
     const pageProps = {
       key: activePage,
@@ -119,13 +116,8 @@ export default function App() {
   };
 
   return (
-    <Layout
-      activePage={activePage}
-      onNavigate={setActivePage}
-      title={PAGE_TITLES[activePage] || 'Dashboard'}
-      onRefresh={handleRefresh}
-      isRefreshing={isRefreshing}
-    >
+    <>
+      <InteractiveBackground />
       <Toaster 
         position="top-right" 
         toastOptions={{ 
@@ -136,9 +128,21 @@ export default function App() {
           } 
         }} 
       />
-      <AnimatePresence mode="wait">
-        {renderPage()}
-      </AnimatePresence>
-    </Layout>
+      {showLanding ? (
+        <LandingPage onStart={handleStart} />
+      ) : (
+        <Layout
+          activePage={activePage}
+          onNavigate={setActivePage}
+          title={PAGE_TITLES[activePage] || 'Dashboard'}
+          onRefresh={handleRefresh}
+          isRefreshing={isRefreshing}
+        >
+          <AnimatePresence mode="wait">
+            {renderPage()}
+          </AnimatePresence>
+        </Layout>
+      )}
+    </>
   );
 }

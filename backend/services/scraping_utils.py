@@ -89,5 +89,81 @@ def normalize_category(raw: str) -> str:
     return mapping.get(raw, raw.lower())
 
 
+
 # Nota: create_stealth_context removida na v0.4.0 — Playwright substituído por aiohttp.
+
+import unicodedata
+from pathlib import Path
+from PIL import Image
+
+def sanitize_filename_part(text: str) -> str:
+    """
+    Remove acentos, caracteres especiais e espaços, convertendo a string
+    para um formato limpo e seguro para nomes de arquivos (snake_case minúsculo).
+    """
+    if not text:
+        return "unknown"
+    # Normaliza a string para decompor caracteres acentuados
+    normalized = unicodedata.normalize('NFKD', text)
+    # Remove acentos mantendo apenas caracteres ASCII
+    ascii_text = normalized.encode('ASCII', 'ignore').decode('ASCII')
+    # Remove caracteres especiais que não sejam letras, números, espaços, hífens ou underlines
+    clean_text = re.sub(r'[^a-zA-Z0-9\s_-]', '', ascii_text)
+    # Converte espaços e hífens em underlines
+    clean_text = re.sub(r'[\s_-]+', '_', clean_text)
+    # Remove underlines extras do início e do fim e coloca em minúsculo
+    return clean_text.strip('_').lower()
+
+def create_thumbnail(input_path: str, output_path: str, width: int = 150) -> bool:
+    """
+    Cria uma miniatura compacta da imagem do card completo (HD), recortando
+    o topo (rosto, rating, etc.) e a base (bandeiras e contorno inferior)
+    e unindo-as, ocultando o nome e as estatísticas.
+    Redimensiona o resultado para ter a largura especificada (default 150px).
+    Caso a imagem original não pareça ser um card completo (proporção incorreta),
+    aplica apenas o redimensionamento proporcional básico como fallback.
+    """
+    try:
+        dest_path = Path(output_path)
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        with Image.open(input_path) as img:
+            w, h = img.size
+            
+            # Um card completo padrão tem proporção altura/largura de ~1.4.
+            # Se a imagem tiver proporção compatível, aplicamos o crop composto.
+            if h > w and h > 250:
+                y_top = int(h * 0.605)
+                y_bottom = int(h * 0.80)
+                
+                top_part = img.crop((0, 0, w, y_top))
+                bottom_part = img.crop((0, y_bottom, w, h))
+                
+                # Composição
+                comp_h = top_part.size[1] + bottom_part.size[1]
+                comp_img = Image.new("RGBA", (w, comp_h))
+                comp_img.paste(top_part, (0, 0))
+                comp_img.paste(bottom_part, (0, top_part.size[1]))
+                
+                # Redimensiona mantendo a proporção da imagem composta
+                w_percent = (width / float(w))
+                h_size = int((float(comp_img.size[1]) * float(w_percent)))
+                resized_img = comp_img.resize((width, h_size), Image.Resampling.LANCZOS)
+            else:
+                # Fallback: redimensionamento proporcional simples
+                w_percent = (width / float(w))
+                h_size = int((float(h) * float(w_percent)))
+                resized_img = img.resize((width, h_size), Image.Resampling.LANCZOS)
+                
+            resized_img.save(dest_path, "PNG")
+            
+        return True
+    except Exception as e:
+        # Logger alternativo para evitar dependências circulares
+        import logging
+        logging.getLogger("help_dmes.scraping_utils").error(
+            f"Falha ao gerar miniatura de {input_path} para {output_path}: {e}"
+        )
+        return False
+
 

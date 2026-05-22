@@ -29,6 +29,10 @@ export default function LandingPage({ onStart }) {
         </div>
 
         <div className="hero-content">
+          <div className="landing-logo-wrapper">
+            <img src="/logo.svg" alt="Help DMEs Logo" className="landing-logo-img" draggable={false} />
+            <span className="landing-logo-text">Help DMEs</span>
+          </div>
           <h1 className="hero-title">VAMOS FARMAR</h1>
           <p className="hero-description">
             A ferramenta está pronta. Vamos juntos farmar para o seu DME

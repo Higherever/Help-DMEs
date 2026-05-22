@@ -34,5 +34,11 @@ update_futbin.py
 backend/test.png
 backend/test_out.png
 images/sbcs/
+images/cards/
+scratch/
+*.html
+translation_cache.json
+backend/scripts/scrape_all_state.json
+backend/scripts/scraper_state.json
 
 
