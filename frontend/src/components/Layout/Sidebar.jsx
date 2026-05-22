@@ -27,6 +27,13 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Garante que a largura inline dinâmica seja removida ao entrar no modo mobile
+  useEffect(() => {
+    if (isMobile && sidebarRef.current) {
+      sidebarRef.current.style.width = '';
+    }
+  }, [isMobile]);
+
   // Determina se a sidebar deve estar no estado expandido
   const isExpanded = isMobile ? isOpen : isHovered;
 
@@ -82,7 +89,7 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
 
       // Física de mola para a largura da barra (cria a oscilação jelly de transição)
       const dw = widthTarget - widthCurrent;
-      vw = vw * 0.82 + dw * 0.08; // Amortecimento 0.82, Rigidez 0.08 (jelly ultra suave)
+      vw = vw * 0.90 + dw * 0.025; // Amortecimento 0.90, Rigidez 0.025 (jelly majestoso, 30% mais lento)
       widthCurrent += vw;
 
       // Física de mola para o offset X do blob (peeling elástico do mouse)
@@ -91,12 +98,12 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
       const targetX = isTransitioning ? 0 : blobXTarget;
 
       const dx = targetX - blobXCurrent;
-      vx = vx * 0.80 + dx * 0.09; // Amortecimento 0.80, Rigidez 0.09 (viscosidade orgânica)
+      vx = vx * 0.88 + dx * 0.03; // Amortecimento 0.88, Rigidez 0.03 (magnetismo viscoso lento)
       blobXCurrent += vx;
 
       // Física de mola para o Y do blob
       const dy = yTarget - yCurrent;
-      vy = vy * 0.82 + dy * 0.08; // Amortecimento 0.82, Rigidez 0.08 (acompanhamento amortecido)
+      vy = vy * 0.90 + dy * 0.025; // Amortecimento 0.90, Rigidez 0.025 (acompanhamento vertical gradual)
       yCurrent += vy;
 
       // Escreve os caminhos de forma direta no DOM a cada frame do requestAnimationFrame para máxima performance
@@ -109,6 +116,11 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
       }
       if (pathStrokeRef.current) {
         pathStrokeRef.current.setAttribute('d', d_stroke);
+      }
+
+      // Acoplamento físico absoluto: ajusta a largura da barra lateral em sincronia com o SVG!
+      if (sidebarRef.current) {
+        sidebarRef.current.style.width = `${widthCurrent}px`;
       }
 
       animationFrameId = requestAnimationFrame(updatePhysics);
@@ -127,30 +139,30 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
   // Variantes de animação da largura da Sidebar (apenas no desktop)
   const sidebarVariants = {
     expanded: { 
-      width: 240,
+      x: 0,
       paddingLeft: 16,
       paddingRight: 16,
-      transition: { type: 'spring', stiffness: 110, damping: 22 } 
+      transition: { type: 'spring', stiffness: 25, damping: 15 } // Sincronizado com a inércia elástica majestosa!
     },
     collapsed: { 
-      width: 72,
-      paddingLeft: 10,
-      paddingRight: 10,
-      transition: { type: 'spring', stiffness: 110, damping: 22 } 
+      x: 0,
+      paddingLeft: 14,
+      paddingRight: 14,
+      transition: { type: 'spring', stiffness: 25, damping: 15 } // Centralização geométrica perfeita!
     }
   };
 
-  // Variantes de fade para os textos que aparecem sob expansão
+  // Variantes de fade para os textos que aparecem sob expansão (sincronizados com o colapso viscoso)
   const textVariants = {
     hidden: { 
       opacity: 0, 
       x: -12,
-      transition: { duration: 0.15, ease: 'easeInOut' } 
+      transition: { duration: 0.35, ease: 'easeInOut' } 
     },
     visible: { 
       opacity: 1, 
       x: 0,
-      transition: { duration: 0.25, ease: 'easeOut', delay: 0.05 } 
+      transition: { duration: 0.55, ease: 'easeOut', delay: 0.1 } 
     }
   };
 
@@ -161,7 +173,7 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
 
       <motion.aside
         ref={sidebarRef}
-        className={`sidebar ${isOpen ? 'open' : ''}`}
+        className={`sidebar ${isOpen ? 'open' : ''} ${isExpanded ? 'expanded' : 'collapsed'}`}
         onMouseEnter={() => !isMobile && setIsHovered(true)}
         onMouseLeave={() => !isMobile && setIsHovered(false)}
         variants={!isMobile ? sidebarVariants : {}}
@@ -177,20 +189,43 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
         )}
 
         {/* Topo: Hambúrguer e Logo do Site */}
-        <div className="sidebar-header">
-          <div 
-            className={`hamburger-trigger ${isExpanded ? 'active' : ''}`} 
-            onClick={() => !isMobile && setIsHovered(!isHovered)}
-            title={isExpanded ? "Recolher Menu" : "Expandir Menu"}
-          >
-            <div className="hamburger">
-              <div className="line"></div>
-              <div className="line"></div>
-              <div className="line"></div>
-            </div>
-          </div>
+        <div className={`sidebar-header ${isExpanded ? 'expanded' : 'collapsed'}`}>
+          <AnimatePresence initial={false}>
+            {isExpanded && (
+              <motion.div 
+                className="hamburger-trigger-wrapper"
+                initial={{ width: 0, opacity: 0, marginRight: 0 }}
+                animate={{ width: 'auto', opacity: 1, marginRight: 8 }}
+                exit={{ width: 0, opacity: 0, marginRight: 0 }}
+                transition={{ type: 'spring', stiffness: 180, damping: 20 }} // Ultra responsivo para fechar sem clipping!
+                style={{ overflow: 'hidden', display: 'flex', alignItems: 'center' }}
+              >
+                <div 
+                  className={`hamburger-trigger ${isExpanded ? 'active' : ''}`} 
+                  onClick={() => !isMobile && setIsHovered(!isHovered)}
+                  title={isExpanded ? "Recolher Menu" : "Expandir Menu"}
+                >
+                  <div className="hamburger">
+                    <div className="line"></div>
+                    <div className="line"></div>
+                    <div className="line"></div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          <div className="sidebar-logo" onClick={() => onNavigate('dashboard')} style={{ cursor: 'pointer' }}>
+          <div 
+            className="sidebar-logo" 
+            onClick={() => {
+              if (!isExpanded && !isMobile) {
+                setIsHovered(true); // Clicar na logo colapsada expande a barra
+              } else {
+                onNavigate('dashboard');
+              }
+            }} 
+            style={{ cursor: 'pointer' }}
+          >
             <div className="sidebar-logo-icon">
               <img src="/logo.svg" alt="Help DMEs Logo" className="logo-svg-render" />
             </div>
@@ -265,16 +300,29 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
             )}
           </AnimatePresence>
 
-          <div 
-            className={`settings-trigger ${activePage === 'settings' ? 'active' : ''}`}
-            onClick={() => {
-              onNavigate('settings');
-              if (isMobile) onClose();
-            }}
-            title="Configurações"
-          >
-            <Settings size={20} strokeWidth={1.8} />
-          </div>
+          <AnimatePresence initial={false}>
+            {isExpanded && (
+              <motion.div
+                className="settings-trigger-wrapper"
+                initial={{ width: 0, opacity: 0, marginLeft: 0 }}
+                animate={{ width: 'auto', opacity: 1, marginRight: 8 }}
+                exit={{ width: 0, opacity: 0, marginLeft: 0 }}
+                transition={{ type: 'spring', stiffness: 180, damping: 20 }}
+                style={{ overflow: 'hidden', display: 'flex', alignItems: 'center' }}
+              >
+                <div 
+                  className={`settings-trigger ${activePage === 'settings' ? 'active' : ''}`}
+                  onClick={() => {
+                    onNavigate('settings');
+                    if (isMobile) onClose();
+                  }}
+                  title="Configurações"
+                >
+                  <Settings size={20} strokeWidth={1.8} />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </motion.aside>
     </>
