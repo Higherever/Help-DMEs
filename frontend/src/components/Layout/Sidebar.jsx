@@ -82,7 +82,7 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
 
       // Física de mola para a largura da barra (cria a oscilação jelly de transição)
       const dw = widthTarget - widthCurrent;
-      vw = vw * 0.76 + dw * 0.12; // Damping 0.76, Stiffness 0.12
+      vw = vw * 0.82 + dw * 0.08; // Amortecimento 0.82, Rigidez 0.08 (jelly ultra suave)
       widthCurrent += vw;
 
       // Física de mola para o offset X do blob (peeling elástico do mouse)
@@ -91,12 +91,12 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
       const targetX = isTransitioning ? 0 : blobXTarget;
 
       const dx = targetX - blobXCurrent;
-      vx = vx * 0.75 + dx * 0.14; // Damping 0.75, Stiffness 0.14
+      vx = vx * 0.80 + dx * 0.09; // Amortecimento 0.80, Rigidez 0.09 (viscosidade orgânica)
       blobXCurrent += vx;
 
       // Física de mola para o Y do blob
       const dy = yTarget - yCurrent;
-      vy = vy * 0.78 + dy * 0.14; // Segue suavemente o Y
+      vy = vy * 0.82 + dy * 0.08; // Amortecimento 0.82, Rigidez 0.08 (acompanhamento amortecido)
       yCurrent += vy;
 
       // Escreve os caminhos de forma direta no DOM a cada frame do requestAnimationFrame para máxima performance
@@ -130,13 +130,13 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
       width: 240,
       paddingLeft: 16,
       paddingRight: 16,
-      transition: { type: 'spring', stiffness: 350, damping: 32 } 
+      transition: { type: 'spring', stiffness: 110, damping: 22 } 
     },
     collapsed: { 
       width: 72,
       paddingLeft: 10,
       paddingRight: 10,
-      transition: { type: 'spring', stiffness: 350, damping: 32 } 
+      transition: { type: 'spring', stiffness: 110, damping: 22 } 
     }
   };
 
