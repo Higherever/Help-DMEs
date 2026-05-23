@@ -89,7 +89,7 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
 
       // Física de mola para a largura da barra (cria a oscilação jelly de transição)
       const dw = widthTarget - widthCurrent;
-      vw = vw * 0.90 + dw * 0.025; // Amortecimento 0.90, Rigidez 0.025 (jelly majestoso, 30% mais lento)
+      vw = vw * 0.80 + dw * 0.008; // Amortecimento 0.80 (ultra suave), Rigidez 0.008 (50% mais suave que o anterior)
       widthCurrent += vw;
 
       // Física de mola para o offset X do blob (peeling elástico do mouse)
@@ -98,12 +98,12 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
       const targetX = isTransitioning ? 0 : blobXTarget;
 
       const dx = targetX - blobXCurrent;
-      vx = vx * 0.88 + dx * 0.03; // Amortecimento 0.88, Rigidez 0.03 (magnetismo viscoso lento)
+      vx = vx * 0.76 + dx * 0.009; // Amortecimento 0.76 (super viscoso), Rigidez 0.009 (50% mais macio e controlado)
       blobXCurrent += vx;
 
       // Física de mola para o Y do blob
       const dy = yTarget - yCurrent;
-      vy = vy * 0.90 + dy * 0.025; // Amortecimento 0.90, Rigidez 0.025 (acompanhamento vertical gradual)
+      vy = vy * 0.80 + dy * 0.008; // Amortecimento 0.80 (deglaceamento fluido), Rigidez 0.008 (acompanhamento vertical 50% mais lento/macio)
       yCurrent += vy;
 
       // Escreve os caminhos de forma direta no DOM a cada frame do requestAnimationFrame para máxima performance
@@ -138,19 +138,6 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
     };
   }, [isMobile]);
 
-  // Variantes de animação da largura da Sidebar (apenas no desktop)
-  const sidebarVariants = {
-    expanded: { 
-      paddingLeft: 16,
-      paddingRight: 16,
-      transition: { type: 'spring', stiffness: 25, damping: 15 } // Sincronizado com a inércia elástica majestosa!
-    },
-    collapsed: { 
-      paddingLeft: 14,
-      paddingRight: 14,
-      transition: { type: 'spring', stiffness: 25, damping: 15 } // Centralização geométrica perfeita!
-    }
-  };
 
   // Variantes de fade para os textos que aparecem sob expansão (sincronizados com o colapso viscoso)
   const textVariants = {
@@ -171,14 +158,11 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
       {/* Overlay escuro em dispositivos móveis */}
       <div className={`sidebar-overlay ${isOpen ? 'open' : ''}`} onClick={onClose} />
 
-      <motion.aside
+      <aside
         ref={sidebarRef}
         className={`sidebar ${isOpen ? 'open' : ''} ${isExpanded ? 'expanded' : 'collapsed'}`}
         onMouseEnter={() => !isMobile && setIsHovered(true)}
         onMouseLeave={() => !isMobile && setIsHovered(false)}
-        variants={!isMobile ? sidebarVariants : {}}
-        animate={!isMobile ? (isExpanded ? 'expanded' : 'collapsed') : {}}
-        initial={!isMobile ? 'collapsed' : {}}
       >
         {/* SVG do blob elástico de fundo (renderizado apenas no desktop) */}
         {!isMobile && (
@@ -324,7 +308,7 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
             )}
           </AnimatePresence>
         </div>
-      </motion.aside>
+      </aside>
     </>
   );
 }

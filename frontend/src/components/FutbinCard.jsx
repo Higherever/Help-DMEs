@@ -42,6 +42,23 @@ const FutbinCard = ({ data, size = 'lg', className = '', showDetails = false }) 
   // ── URLs com fallback ──
   const bgUrl = data.bg_url_hd || data.bg_url || '';
 
+  // Estado resiliente para gerenciar a imagem de background e fallbacks
+  const [imgSrc, setImgSrc] = useState(bgUrl);
+
+  React.useEffect(() => {
+    setImgSrc(bgUrl);
+  }, [bgUrl]);
+
+  const handleImageError = () => {
+    // Se a imagem de card HD completo falhar, tentamos carregar a render/face original
+    if (imgSrc !== data.face_url && data.face_url) {
+      setImgSrc(data.face_url);
+    } else {
+      // Fallback absoluto: ocultar a tag img
+      setImgSrc('');
+    }
+  };
+
   const formatName = (str) => {
     if (!str) return '';
     return str.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
@@ -67,11 +84,12 @@ const FutbinCard = ({ data, size = 'lg', className = '', showDetails = false }) 
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
-        {bgUrl && (
+        {imgSrc && (
           <img
             className="futbin-card-bg"
-            src={bgUrl}
+            src={imgSrc}
             alt={name}
+            onError={handleImageError}
             loading="eager"
             referrerPolicy="no-referrer"
             draggable={false}

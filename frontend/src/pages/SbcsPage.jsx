@@ -14,10 +14,72 @@ import {
 } from 'lucide-react';
 
 import { useApi } from '../hooks/useApi';
-import FutbinCard from '../components/FutbinCard';
 import FutbinCardTilt from '../components/FutbinCardTilt';
 import GooeySearch from '../components/Search/GooeySearch';
 
+
+// Componente de Dropdown Customizado Premium (Cyberpunk/Glassmorphism)
+function PremiumDropdown({ value, onChange, options }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const selectedOption = options.find(opt => opt.value === value) || options[0];
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="premium-dropdown-container" ref={dropdownRef}>
+      <button 
+        type="button"
+        className="premium-dropdown-trigger"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span>{selectedOption.label}</span>
+        <ChevronDown 
+          size={16} 
+          style={{ 
+            transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+            color: 'var(--accent)'
+          }} 
+        />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.ul 
+            initial={{ opacity: 0, y: 8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="premium-dropdown-menu"
+          >
+            {options.map((opt) => (
+              <li 
+                key={opt.value}
+                className={`premium-dropdown-item ${opt.value === value ? 'selected' : ''}`}
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+              >
+                {opt.label}
+              </li>
+            ))}
+          </motion.ul>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 // Componente SbcCard separado para gerenciar estado de expansão
 function SbcCard({ sbc, api, onNavigate }) {
@@ -78,7 +140,7 @@ function SbcCard({ sbc, api, onNavigate }) {
   };
 
   // Priorizar imagem da carta do jogador (sempre versão FULL local em alta definição do console)
-  const rawCardImageUrl = details?.player_card?.card_image_url;
+  const rawCardImageUrl = sbc.player_card?.card_image_url || details?.player_card?.card_image_url;
   // rawCardImageUrl é válido como card HD apenas se for um arquivo local de /full/ ou fc_player_ ou sbc_player_
   const isRawCardHD = rawCardImageUrl && !rawCardImageUrl.includes('/sbcs/') && (
     rawCardImageUrl.includes('/full/') || rawCardImageUrl.includes('fc_player_') || rawCardImageUrl.includes('sbc_player_')
@@ -86,6 +148,22 @@ function SbcCard({ sbc, api, onNavigate }) {
   const cardImage = isRawCardHD
     ? getImageUrl(rawCardImageUrl.replace('/small/', '/full/')) 
     : getImageUrl(sbc.image_url);
+
+  // Estado resiliente para gerenciar a imagem de fallback ou card HD físico
+  const [cardImgSrc, setCardImgSrc] = useState(cardImage);
+
+  useEffect(() => {
+    setCardImgSrc(cardImage);
+  }, [cardImage]);
+
+  const handleImgError = () => {
+    const fallback = getImageUrl(sbc.image_url);
+    if (cardImgSrc !== fallback && fallback) {
+      setCardImgSrc(fallback);
+    } else {
+      setCardImgSrc(null);
+    }
+  };
 
   return (
     <motion.div 
@@ -156,165 +234,53 @@ function SbcCard({ sbc, api, onNavigate }) {
       {/* Body */}
       <div style={{ display: 'flex', padding: '16px', gap: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
         {/* Left: Player Card */}
-        {(() => {
-          // ── Fonte única de verdade: player_card da API (inline na listagem) ──
-          let cardData = null;
-
-          if (sbc.player_card) {
-            // Dados estruturados do player_card (fonte primária)
-            const pc = sbc.player_card;
-            // Merge com dados completos do detalhe se disponível
-            const full = details?.player_card_full;
-
-            // Garantir uso da versão FULL do console em alta definição
-            const rawBgRaw = pc.card_image_url ? pc.card_image_url.replace('/small/', '/full/') : pc.card_image_url;
-            const rawBg = getImageUrl(rawBgRaw);
-            // isFullCard = true APENAS se a URL aponta para uma imagem de card HD local
-            // Cards em /images/sbcs/ são thumbnails do SBC, não cards de jogador HD
-            const isFullCard = rawBg && !rawBg.includes('/sbcs/') && (
-              rawBg.includes('/full/') || 
-              rawBg.includes('full_card') || 
-              rawBg.includes('sbc_player_') || 
-              rawBg.includes('fc_player_')
-            );
-            const finalBg = isFullCard ? rawBg : (sbc.image_url ? getImageUrl(sbc.image_url) : rawBg);
-
-            // Se não é um card HD completo, usar o fallback estático de imagem do SBC
-            if (!isFullCard) {
-              cardData = null;
-            } else {
-              cardData = {
-                // Dados visuais base
-                bg_url: finalBg,
-                face_url: getImageUrl(pc.render_url || pc.face_url),
-                rating: pc.overall,
-                position: pc.position,
-                name: pc.name,
-                // 6 face stats
-                stats: [
-                  { name: 'PAC', value: String(pc.pace || 0) },
-                  { name: 'SHO', value: String(pc.shooting || 0) },
-                  { name: 'PAS', value: String(pc.passing || 0) },
-                  { name: 'DRI', value: String(pc.dribbling_stat || 0) },
-                  { name: 'DEF', value: String(pc.defending || 0) },
-                  { name: 'PHY', value: String(pc.physic || 0) },
-                ],
-                // Metadados inline
-                skill_moves: pc.skill_moves,
-                weak_foot: pc.weak_foot,
-                workrates: pc.workrates,
-                accelerate_type: pc.accelerate_type,
-                alt_positions: pc.alt_positions,
-                // URLs visuais
-                nation_url: getImageUrl(pc.nation_flag_url),
-                club_url: getImageUrl(pc.club_logo_url),
-                league_url: getImageUrl(pc.league_logo_url),
-                // Meta
-                meta_rating: pc.meta_rating,
-                meta_tier: pc.meta_tier,
-                playstyles: pc.playstyles_json ? JSON.parse(pc.playstyles_json) : [],
-                // Sub-atributos completos (do detalhe, se carregado)
-                ...(full ? {
-                  acceleration: full.acceleration, sprint_speed: full.sprint_speed,
-                  finishing: full.finishing, shot_power: full.shot_power,
-                  long_shots: full.long_shots, volleys: full.volleys, positioning_att: full.positioning_att,
-                  short_passing: full.short_passing, long_passing: full.long_passing,
-                  crossing: full.crossing, curve: full.curve, free_kick: full.free_kick, vision: full.vision,
-                  agility: full.agility, balance: full.balance, reactions: full.reactions,
-                  ball_control: full.ball_control, composure: full.composure, skill_dribbling: full.skill_dribbling,
-                  interceptions: full.interceptions, heading: full.heading, marking: full.marking,
-                  standing_tackle: full.standing_tackle, sliding_tackle: full.sliding_tackle,
-                  jumping: full.jumping, stamina: full.stamina, strength: full.strength, aggression: full.aggression,
-                  penalties: full.penalties,
-                  foot: full.foot, height: full.height, weight: full.weight, age: full.age,
-                  country: full.country, club_name: full.club_name, league_name: full.league_name,
-                } : {}),
-              };
-            }
-          } else if (sbc.raw_card_data) {
-            // ── Fallback legado: parsear raw_card_data JSON ──
-            try {
-              cardData = typeof sbc.raw_card_data === 'string'
-                ? JSON.parse(sbc.raw_card_data)
-                : sbc.raw_card_data;
-              if (cardData) {
-                let rawBgPath = cardData.bg_url_hd || cardData.bg_url;
-                if (rawBgPath && typeof rawBgPath === 'string') {
-                  rawBgPath = rawBgPath.replace('/small/', '/full/');
-                }
-                const rawBg = getImageUrl(rawBgPath);
-                const isFull = rawBg && (
-                  rawBg.includes('/full/') || 
-                  rawBg.includes('full_card') || 
-                  rawBg.includes('sbc_player_') || 
-                  rawBg.includes('fc_player_')
-                );
-                if (isFull) {
-                  cardData.bg_url_hd = rawBg;
-                  cardData.bg_url = rawBg;
-                } else if (sbc.image_url) {
-                  cardData.bg_url_hd = getImageUrl(sbc.image_url);
-                  cardData.bg_url = getImageUrl(sbc.image_url);
-                }
-              }
-            } catch { cardData = null; }
-          }
-
-          return cardData ? (
-            <div className="neon-border-wrapper">
-              <FutbinCardTilt>
-                <FutbinCard data={cardData} size="lg" />
-              </FutbinCardTilt>
-            </div>
-          ) : (
-            <div className="neon-border-wrapper">
-              <FutbinCardTilt>
+        <div className="neon-border-wrapper">
+          <FutbinCardTilt>
+            <div style={{ 
+              width: '252px', 
+              height: '353px',
+              flexShrink: 0, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              background: cardImage ? 'transparent' : 'linear-gradient(145deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
+              borderRadius: 12,
+              border: cardImage ? 'none' : '1px solid rgba(255,255,255,0.08)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              {cardImgSrc ? (
+                <motion.img 
+                  layoutId={`img-${sbc.id}`}
+                  whileHover={{ scale: 1.05 }}
+                  src={cardImgSrc} 
+                  alt={sbc.name} 
+                  onError={handleImgError}
+                  referrerPolicy="no-referrer"
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', zIndex: 2 }} 
+                />
+              ) : (
+                <LayoutGrid size={80} strokeWidth={1} style={{ opacity: 0.2 }} />
+              )}
+              {!cardImage && details?.player_card_full && (
                 <div style={{ 
-                  width: '252px', 
-                  height: '353px',
-                  flexShrink: 0, 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  background: cardImage ? 'transparent' : 'linear-gradient(145deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
-                  borderRadius: 12,
-                  border: cardImage ? 'none' : '1px solid rgba(255,255,255,0.08)',
-                  position: 'relative',
-                  overflow: 'hidden'
+                  position: 'absolute', 
+                  top: 12, 
+                  right: 12, 
+                  background: 'var(--accent)', 
+                  color: '#000', 
+                  fontSize: '1.6rem', 
+                  fontWeight: 900, 
+                  padding: '2px 10px', 
+                  borderRadius: 6, 
+                  zIndex: 3 
                 }}>
-                  {cardImage ? (
-                    <motion.img 
-                      layoutId={`img-${sbc.id}`}
-                      whileHover={{ scale: 1.05 }}
-                      src={cardImage} 
-                      alt={sbc.name} 
-                      referrerPolicy="no-referrer"
-                      style={{ width: '100%', height: '100%', objectFit: 'contain', zIndex: 2 }} 
-                    />
-                  ) : (
-                    <LayoutGrid size={80} strokeWidth={1} style={{ opacity: 0.2 }} />
-                  )}
-                  {!cardImage && details?.player_card_full && (
-                    <div style={{ 
-                      position: 'absolute', 
-                      top: 12, 
-                      right: 12, 
-                      background: 'var(--accent)', 
-                      color: '#000', 
-                      fontSize: '1.6rem', 
-                      fontWeight: 900, 
-                      padding: '2px 10px', 
-                      borderRadius: 6, 
-                      zIndex: 3 
-                    }}>
-                      {details.player_card_full.overall}
-                    </div>
-                  )}
+                  {details.player_card_full.overall}
                 </div>
-              </FutbinCardTilt>
+              )}
             </div>
-          );
-        })()}
+          </FutbinCardTilt>
+        </div>
         {/* Right: Info Content */}
         <div style={{ flex: 1, minWidth: '200px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ 
@@ -520,6 +486,165 @@ function SbcCardSkeleton() {
   );
 }
 
+// Componente isolado para o Slider de Custo, garantindo 60 FPS e física de mola real de rotação
+function CostSlider({ initialValue, onChangeFinished }) {
+  const [localCost, setLocalCost] = useState(initialValue);
+  const timeoutRef = useRef(null);
+
+  // Referências para a física de mola elástica (spring physics)
+  const percentRef = useRef((initialValue / 2000000) * 100);
+  const currentRotationRef = useRef(0);
+  const targetRotationRef = useRef(0);
+  const velocityRef = useRef(0);
+  const animFrameRef = useRef(null);
+  const tooltipRef = useRef(null);
+
+  useEffect(() => {
+    setLocalCost(initialValue);
+    percentRef.current = (initialValue / 2000000) * 100;
+  }, [initialValue]);
+
+  // Loop de física elástica rodando a 60 FPS nativos
+  useEffect(() => {
+    const updatePhysics = () => {
+      const diff = targetRotationRef.current - currentRotationRef.current;
+      
+      // Equação física: força elástica com rigidez de 0.12 e amortecimento de 0.82
+      const force = diff * 0.12;
+      velocityRef.current = (velocityRef.current + force) * 0.82;
+      currentRotationRef.current += velocityRef.current;
+
+      // Suaviza a rotação de volta a 0 quando o arraste cessa
+      targetRotationRef.current *= 0.90;
+
+      // Escreve diretamente no DOM para performance extrema a 60 FPS cravados
+      if (tooltipRef.current) {
+        const percent = percentRef.current;
+        tooltipRef.current.style.left = `${percent}%`;
+        tooltipRef.current.style.transform = `translateX(-50%) rotate(${currentRotationRef.current}deg)`;
+      }
+
+      animFrameRef.current = requestAnimationFrame(updatePhysics);
+    };
+
+    animFrameRef.current = requestAnimationFrame(updatePhysics);
+
+    return () => {
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+      }
+    };
+  }, []);
+
+  const handleSliderChange = (e) => {
+    const val = Number(e.target.value);
+    setLocalCost(val);
+
+    // Calcula a variação de posição física (deltaPercent) para alimentar a mola inercial
+    const nextPercent = (val / 2000000) * 100;
+    const deltaPercent = nextPercent - percentRef.current;
+    percentRef.current = nextPercent;
+
+    // A rotação alvo do balão de diálogo é calculada com base na direção e velocidade do arraste
+    let targetRot = -deltaPercent * 3.5;
+    targetRot = Math.max(-35, Math.min(35, targetRot)); // Trava em 35 graus para segurança estética
+    targetRotationRef.current = targetRot;
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      onChangeFinished(val);
+    }, 150);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  const percent = (localCost / 2000000) * 100;
+
+  return (
+    <label className="cost-slider-label-wrapper">
+      <div className="cost-slider-header">
+        <span>CUSTO MÁXIMO</span>
+        <span className="highlight">
+          {localCost >= 2000000 ? 'Qualquer Custo' : `${localCost.toLocaleString('pt-BR')} 🪙`}
+        </span>
+      </div>
+      <div className="cost-slider-input-container">
+        <input 
+          type="range"
+          min="0"
+          max="2000000"
+          step="1000"
+          value={localCost}
+          onChange={handleSliderChange}
+          className="neon-slider-premium"
+          style={{ '--percent': `${percent}%` }}
+        />
+        <output 
+          ref={tooltipRef}
+          className="neon-slider-tooltip-bubble"
+          style={{
+            left: `${percent}%`,
+            transform: `translateX(-50%) rotate(0deg)`
+          }}
+        >
+          {localCost >= 2000000 ? 'Qualquer Custo' : `${localCost.toLocaleString('pt-BR')} 🪙`}
+        </output>
+      </div>
+    </label>
+  );
+}
+
+// Extrai a expiração restante em horas de forma resiliente
+const getDiffHours = (sbc) => {
+  if (sbc.expires_at) {
+    const expires = new Date(sbc.expires_at);
+    const now = new Date();
+    const diff = (expires - now) / (1000 * 60 * 60);
+    if (diff > 0) return diff;
+  }
+  
+  // Fallback: tentar parsear a partir do expires_text traduzido do Futbin
+  const text = sbc.expires_text || '';
+  if (!text) return Infinity; // Sem texto de expiração = longa duração
+  
+  const lowerText = text.toLowerCase();
+  
+  if (lowerText.includes('expirado') || lowerText.includes('expired')) {
+    return -1;
+  }
+  
+  const numMatch = lowerText.match(/(\d+)/);
+  if (!numMatch) {
+    return Infinity;
+  }
+  
+  const num = parseInt(numMatch[1], 10);
+  
+  if (lowerText.includes('dia') || lowerText.includes('day')) {
+    return num * 24;
+  }
+  if (lowerText.includes('h') || lowerText.includes('hour')) {
+    return num;
+  }
+  if (lowerText.includes('semana') || lowerText.includes('week')) {
+    return num * 24 * 7;
+  }
+  if (lowerText.includes('min')) {
+    return num / 60;
+  }
+  
+  return Infinity;
+};
+
 
 export default function SbcsPage({ onNavigate }) {
   const api = useApi();
@@ -643,12 +768,121 @@ export default function SbcsPage({ onNavigate }) {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  // Reclassificação dinâmica e precisa das categorias para corrigir as abas no frontend
+  const reclassifiedSbcs = useMemo(() => {
+    return sbcs.map(s => {
+      const name = (s.name || '').toLowerCase();
+      
+      // 1. Identificar se entrega um jogador especial fixo
+      // SBCs de jogadores reais possuem player_card válido.
+      // DMEs que contêm termos como "pick", "escolha" ou "melhoria" de cartas no nome
+      // NÃO entregam um jogador especial fixo, mas sim uma ESCOLHA (Player Pick) ou Melhoria (Upgrade).
+      const isPickOrPackName = name.includes('pick') || 
+                               name.includes('escolha') || 
+                               name.includes('1 de') || 
+                               name.includes('1 of') || 
+                               name.includes('2 de') || 
+                               name.includes('2 of') || 
+                               name.includes('3 de') || 
+                               name.includes('3 of') || 
+                               name.includes('4 de') || 
+                               name.includes('4 of') || 
+                               name.includes('5 de') || 
+                               name.includes('5 of') || 
+                               name.includes('pacote') || 
+                               name.includes('pack') ||
+                               name.includes('atualização') ||
+                               name.includes('atualizacoes') ||
+                               name.includes('upgrade') ||
+                               name.includes('melhoria') ||
+                               name.includes('melhorias') ||
+                               name.includes('login') || 
+                               name.includes('criação') || 
+                               name.includes('criacao') || 
+                               /\b\d{2}\+\b/.test(name);
+
+      const deliversFixedPlayer = s.player_card && !isPickOrPackName;
+
+      // 2. Classificação de Icons fixos (conforme decisão de design do usuário)
+      // Icons devem conter estritamente as cartas de Ícones/Heroes fixos.
+      const isFixedIcon = deliversFixedPlayer && (
+        name.includes('icon') || 
+        name.includes('ícone') || 
+        name.includes('ídolo') || 
+        name.includes('hero') || 
+        name.includes('herói') || 
+        name.includes('maldini') || 
+        name.includes('kaká') || 
+        name.includes('kaka') ||
+        (s.player_card && (s.player_card.card_type || '').toLowerCase().includes('icon')) ||
+        (s.player_card && (s.player_card.card_type || '').toLowerCase().includes('hero'))
+      );
+
+      // 3. Determinar categoria final de acordo com a aba mapeada
+      let category = 'Upgrades'; // Fallback padrão
+      
+      if (isFixedIcon) {
+        category = 'Icons';
+      } else if (deliversFixedPlayer) {
+        category = 'Players';
+      } else {
+        // Se não entrega jogador fixo, dividimos entre Upgrades e Challenges
+        const isUpgrade = name.includes('upgrade') || 
+                          name.includes('melhoria') || 
+                          name.includes('melhorias') || 
+                          name.includes('atualização') || 
+                          name.includes('atualizacoes') || 
+                          name.includes('pick') || 
+                          name.includes('escolha') || 
+                          name.includes('1 de') || 
+                          name.includes('1 of') || 
+                          name.includes('pack') || 
+                          name.includes('pacote') ||
+                          name.includes('provisões') || 
+                          name.includes('provisoes') || 
+                          name.includes('login') || 
+                          name.includes('criação') || 
+                          name.includes('criacao') || 
+                          /\b\d{2}\+\b/.test(name);
+                           
+        if (isUpgrade) {
+          category = 'Upgrades';
+        } else {
+          // Se for puzzle/desafio diário ou semanal que entrega pacotes
+          const isChallenge = name.includes('desafio') || 
+                              name.includes('challenge') || 
+                              name.includes('combates marcantes') || 
+                              name.includes('marquee') || 
+                              name.includes('confrontos') || 
+                              name.includes('puzzle') || 
+                              name.includes('diário') || 
+                              name.includes('diario') || 
+                              name.includes('daily');
+          if (isChallenge) {
+            category = 'Challenges';
+          } else {
+            // Preservar categoria original ou aplicar fallback inteligente
+            category = s.category && s.category.toLowerCase() === 'challenges' ? 'Challenges' : 'Upgrades';
+          }
+        }
+      }
+
+      // Garantir primeira letra em maiúsculo ('Players', 'Upgrades', 'Challenges', 'Icons')
+      const formattedCategory = category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
+
+      return {
+        ...s,
+        category: formattedCategory
+      };
+    });
+  }, [sbcs]);
+
   const filteredAndSortedSbcs = useMemo(() => {
-    let result = [...sbcs];
+    let result = [...reclassifiedSbcs];
 
     // Categoria
     if (categoryFilter !== 'Todos') {
-      result = result.filter(s => s.category === categoryFilter);
+      result = result.filter(s => s.category && s.category.toLowerCase() === categoryFilter.toLowerCase());
     }
 
     // Busca
@@ -670,14 +904,10 @@ export default function SbcsPage({ onNavigate }) {
       result = result.filter(s => s.is_repeatable);
     }
 
-    // Filtro de Expiração Relativa
+    // Filtro de Expiração Relativa (Consertado com fallback inteligente para expires_text do Futbin)
     if (expirationDays !== 'Todos') {
       result = result.filter(s => {
-        const expiresAt = s.expires_at;
-        if (!expiresAt) return false;
-        const expires = new Date(expiresAt);
-        const now = new Date();
-        const diffHours = (expires - now) / (1000 * 60 * 60);
+        const diffHours = getDiffHours(s);
         if (diffHours < 0) return false;
         
         const maxHours = expirationDays * 24;
@@ -702,15 +932,15 @@ export default function SbcsPage({ onNavigate }) {
       if (sortOption === 'cost_desc') return (b.total_cost || 0) - (a.total_cost || 0);
       if (sortOption === 'cost_asc') return (a.total_cost || 0) - (b.total_cost || 0);
       if (sortOption === 'exp_asc') {
-        const tA = a.expires_at ? new Date(a.expires_at).getTime() : Infinity;
-        const tB = b.expires_at ? new Date(b.expires_at).getTime() : Infinity;
+        const tA = getDiffHours(a) === -1 ? Infinity : (a.expires_at ? new Date(a.expires_at).getTime() : Date.now() + getDiffHours(a) * 60 * 60 * 1000);
+        const tB = getDiffHours(b) === -1 ? Infinity : (b.expires_at ? new Date(b.expires_at).getTime() : Date.now() + getDiffHours(b) * 60 * 60 * 1000);
         return tA - tB;
       }
       return 0;
     });
 
     return result;
-  }, [sbcs, debouncedSearch, categoryFilter, sortOption, maxCost, expirationDays, repeatableOnly]);
+  }, [reclassifiedSbcs, debouncedSearch, categoryFilter, sortOption, maxCost, expirationDays, repeatableOnly]);
 
   if (loading || isScraping) {
     const current = scrapeStatus?.progress?.current || 0;
@@ -1174,7 +1404,7 @@ export default function SbcsPage({ onNavigate }) {
   };
 
   return (
-    <div className="fade-in" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="fade-in" style={{ padding: '0px 24px 24px 24px', display: 'flex', flexDirection: 'column', gap: 24 }}>
       
       {/* Painel Command Center de Filtros Premium */}
       <div className="command-center-filters">
@@ -1203,41 +1433,26 @@ export default function SbcsPage({ onNavigate }) {
           </div>
 
           {/* Ordenação Premium */}
-          <select 
-            className="input" 
-            style={{ width: 'auto', flex: '0 1 auto', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}
+          <PremiumDropdown 
             value={sortOption}
-            onChange={(e) => setSortOption(e.target.value)}
-          >
-            <option value="cost_desc">Custo: Maior ➔ Menor</option>
-            <option value="cost_asc">Custo: Menor ➔ Maior</option>
-            <option value="exp_asc">Expiração Próxima</option>
-          </select>
+            onChange={setSortOption}
+            options={[
+              { value: 'cost_desc', label: 'Custo: Maior ➔ Menor' },
+              { value: 'cost_asc', label: 'Custo: Menor ➔ Maior' },
+              { value: 'exp_asc', label: 'Expiração Próxima' }
+            ]}
+          />
 
         </div>
 
         {/* Segunda Linha: Filtros Avançados Inteligentes */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center', marginTop: 8 }}>
           
-          {/* Slider de Custo Dinâmico */}
-          <div className="cost-slider-container">
-            <div className="cost-slider-header">
-              <span>CUSTO MÁXIMO</span>
-              <span className="highlight">
-                {maxCost >= 2000000 ? 'Qualquer Custo' : `${maxCost.toLocaleString('pt-BR')} 🪙`}
-              </span>
-            </div>
-            <input 
-              type="range"
-              min="0"
-              max="2000000"
-              step="50000"
-              value={maxCost}
-              onChange={(e) => setMaxCost(Number(e.target.value))}
-              className="neon-slider"
-              style={{ '--percent': `${(maxCost / 2000000) * 100}%` }}
-            />
-          </div>
+          {/* Slider de Custo Dinâmico Premium com Tooltip Flutuante 3D Isolado a 60 FPS */}
+          <CostSlider 
+            initialValue={maxCost} 
+            onChangeFinished={setMaxCost} 
+          />
 
           {/* Filtros Rápidos de Expiração e Repetição */}
           <div className="quick-toggle-container">

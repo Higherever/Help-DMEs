@@ -373,6 +373,15 @@ body {
   z-index: 30;
   box-shadow: none;
   position: relative;
+  transition: padding 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar.collapsed {
+  padding: 20px 14px;
+}
+
+.sidebar.expanded {
+  padding: 20px 16px;
 }
 
 @media (min-width: 769px) {
@@ -783,7 +792,7 @@ body {
 
 .page-content {
   flex: 1;
-  padding: 32px;
+  padding: 16px 32px 32px 32px;
   overflow-y: auto;
 }
 
@@ -1132,6 +1141,12 @@ body {
               filter 0.35s ease;
   transform-style: preserve-3d;
   will-change: transform;
+  
+  /* Nitidez extrema para aceleracao gráfica 3D e evitar desfoques induzidos */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 .futbin-card:hover {
@@ -1168,6 +1183,12 @@ body {
   object-fit: cover;
   z-index: 1;
   pointer-events: none;
+  
+  /* Preserva nitidez pixel-perfect extrema mesmo em downscaling de alta resolucao */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 /* ═══ CAMADA 2: Face do Jogador ═══
@@ -1956,6 +1977,16 @@ body {
   box-shadow: none !important;
 }
 
+/* Forçar nitidez cristalina pixel-perfect e aceleração de hardware nas imagens de cards do SBC */
+.neon-border-wrapper img {
+  image-rendering: -webkit-optimize-contrast !important;
+  image-rendering: crisp-edges !important;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+}
+
 /* Faixa de LED neon desativada */
 .neon-border-wrapper::before {
   display: none !important;
@@ -2004,7 +2035,7 @@ body {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   border: none !important;
-  padding: 20px 0; /* Padding horizontal zero para fluidez visual */
+  padding: 0 0 20px 0; /* Padding horizontal zero para fluidez visual */
   border-radius: 0;
   width: 100%;
   position: relative;
@@ -2104,17 +2135,36 @@ body {
   text-shadow: 0 0 8px rgba(var(--accent-rgb), 0.2);
 }
 
-/* 3. Slider de Custo Dinâmico */
-.cost-slider-container {
+/* 3. Slider de Custo Dinâmico Premium (Modelo 3D com Tooltip Reativo - Frontend Masters) */
+@property --val {
+  syntax: '<integer>';
+  inherits: true;
+  initial-value: 0; 
+}
+@property --e {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0; 
+}
+
+.cost-slider-label-wrapper {
+  --c: var(--accent); /* Slider accent color */
+  --g: round(.3em, 1px);  /* the gap */
+  --l: round(.2em, 1px);  /* line thickness */
+  --s: round(1.2em, 1px); /* thumb size */
+  --t: round(.5em, 1px);  /* tooltip tail size */
+  --r: round(.6em, 1px);  /* tooltip radius */
+  
+  timeline-scope: --thumb-view;
+  position: relative;
+  font-size: 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-width: 260px;
-  flex: 1 1 260px;
+  min-width: 280px;
+  flex: 1 1 280px;
   background: transparent !important;
   border: none !important;
-  padding: 12px 0; /* Padding horizontal zero para fluidez visual */
-  border-radius: 0;
 }
 
 .cost-slider-header {
@@ -2130,42 +2180,106 @@ body {
   color: var(--warning);
 }
 
-.neon-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.08);
-  outline: none;
-  margin: 10px 0;
+.cost-slider-input-container {
   position: relative;
-}
-
-.neon-slider::-webkit-slider-runnable-track {
   width: 100%;
-  height: 4px;
-  cursor: pointer;
-  background: linear-gradient(to right, var(--accent) var(--percent, 100%), rgba(255,255,255,0.08) var(--percent, 100%));
-  border-radius: 2px;
+  height: 24px;
+  margin-top: 32px; /* Dá espaço vertical para o balão flutuante acima */
+  display: flex;
+  align-items: center;
+  overflow: visible; /* Importante para a tooltip transbordar */
 }
 
-.neon-slider::-webkit-slider-thumb {
+.neon-slider-premium {
+  width: 100%;
+  height: 6px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  cursor: pointer;
+  outline: none;
+  border: none;
+  position: relative;
+  overflow: visible;
+  /* Cria o track preenchido de laranja neon dinâmico usando o percentual */
+  background: linear-gradient(to right, var(--accent) var(--percent, 100%), rgba(255,255,255,0.08) var(--percent, 100%));
+}
+
+/* Chromium */
+.neon-slider-premium::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--accent);
-  border: 2px solid #000;
-  cursor: pointer;
-  margin-top: -5px;
+  background: #000000; /* Miolo premium escuro */
+  border: 2px solid var(--accent); /* Aro laranja brilhante */
   box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.8);
-  transition: transform 0.1s;
+  cursor: pointer;
+  transition: transform 0.15s ease;
 }
 
-.neon-slider::-webkit-slider-thumb:hover {
+.neon-slider-premium::-webkit-slider-thumb:hover {
   transform: scale(1.2);
+}
+
+/* Firefox */
+.neon-slider-premium::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #000000;
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.8);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.neon-slider-premium::-moz-range-thumb:hover {
+  transform: scale(1.2);
+}
+
+.neon-slider-tooltip-bubble {
+  position: absolute;
+  top: -38px; /* Suspenso perfeitamente no topo */
+  transform-origin: 50% 32px; /* Origem de rotação centralizada sobre o polegar do slider */
+  pointer-events: none;
+  z-index: 50;
+  
+  /* Estilo do Balão de Tooltip Premium */
+  color: #000000; /* Texto escuro de altíssima legibilidade */
+  background: var(--accent);
+  font-weight: 800;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-align: center;
+  padding: 5px 11px;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 18px rgba(var(--accent-rgb), 0.35);
+  white-space: nowrap;
+  
+  /* Animações e Transição suaves */
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+/* Pequeno triângulo da cauda da tooltip dinâmico */
+.neon-slider-tooltip-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid var(--accent);
+}
+
+@keyframes range-anim {
+  0%   { --val: 100; }
+  100% { --val: 0; }
 }
 
 /* 4. Filtros Rápidos de Expiração e Repetição */
@@ -3042,6 +3156,84 @@ body {
     0 6px 20px rgba(0, 0, 0, 0.7),
     0 0 18px rgba(var(--accent-rgb), 0.45),
     inset 0 0 8px rgba(var(--accent-rgb), 0.2);
+}
+
+/* ── Premium Dropdown Customizado Cyberpunk ── */
+.premium-dropdown-container {
+  position: relative;
+  width: 240px;
+  font-family: var(--font-main), sans-serif;
+  z-index: 100;
+}
+
+.premium-dropdown-trigger {
+  width: 100%;
+  height: 42px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.02),
+              0 4px 6px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
+}
+
+.premium-dropdown-trigger:hover,
+.premium-dropdown-trigger:focus-visible {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(var(--accent-rgb), 0.3);
+  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.15),
+              inset 0 1px 1px rgba(255, 255, 255, 0.04);
+  outline: none;
+}
+
+.premium-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  background: rgba(13, 13, 13, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 6px 0;
+  margin: 0;
+  list-style: none;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5),
+              0 0 24px rgba(var(--accent-rgb), 0.05),
+              inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  z-index: 101;
+}
+
+.premium-dropdown-item {
+  padding: 10px 16px;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+}
+
+.premium-dropdown-item:hover {
+  background: rgba(var(--accent-rgb), 0.08);
+  color: var(--accent);
+  padding-left: 20px; /* Micro-animação premium de deslocamento */
+}
+
+.premium-dropdown-item.selected {
+  background: rgba(var(--accent-rgb), 0.12);
+  color: var(--accent);
+  font-weight: 700;
 }
 
 

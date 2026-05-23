@@ -27,6 +27,7 @@ class CardScreenshotService:
                 self._browser = await self._pw.chromium.launch(headless=True)
                 self._context = await self._browser.new_context(
                     viewport={"width": 1280, "height": 1024},
+                    device_scale_factor=2,  # Força renderização Retina/HD cristalina nas capturas de tela
                     user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
                 )
 
