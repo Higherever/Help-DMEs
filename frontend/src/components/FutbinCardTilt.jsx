@@ -15,20 +15,13 @@ export default function FutbinCardTilt({ children }) {
     const xc = rect.width / 2;
     const yc = rect.height / 2;
     
-    // Limitado a 10 graus de rotação para manter elegância e legibilidade
-    const rotateX = ((yc - y) / yc) * 10;
-    const rotateY = ((x - xc) / xc) * 10;
+    // Limitado a 20 graus de rotação para intensificar o efeito 3D com sofisticação
+    const rotateX = ((yc - y) / yc) * 20;
+    const rotateY = ((x - xc) / xc) * 20;
 
-    // Percentual do cursor para controlar a varredura de luz holográfica
-    const percentX = (x / rect.width) * 100;
-    const percentY = (y / rect.height) * 100;
-
-    // Injeção de variáveis CSS diretamente no nó do DOM
-    // Isso é executado de forma imediata na GPU sem provocar renderizações do React
+    // Injeção de variáveis CSS diretamente no nó do DOM para execução imediata na GPU
     card.style.setProperty('--rx', `${rotateX}deg`);
     card.style.setProperty('--ry', `${rotateY}deg`);
-    card.style.setProperty('--mx', `${percentX}%`);
-    card.style.setProperty('--my', `${percentY}%`);
   };
 
   const handleMouseLeave = () => {
@@ -38,8 +31,6 @@ export default function FutbinCardTilt({ children }) {
     // Transição suave de volta ao alinhamento reto padrão
     card.style.setProperty('--rx', '0deg');
     card.style.setProperty('--ry', '0deg');
-    card.style.setProperty('--mx', '50%');
-    card.style.setProperty('--my', '50%');
   };
 
   return (
@@ -49,7 +40,6 @@ export default function FutbinCardTilt({ children }) {
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     >
-      <div className="tilt-card-shine" />
       <div className="tilt-card-content">
         {children}
       </div>

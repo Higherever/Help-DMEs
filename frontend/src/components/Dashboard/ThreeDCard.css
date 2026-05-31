@@ -1,0 +1,148 @@
+.three-card-background-canvas-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0; /* Entre o site-background-canvas (geralmente sem z-index ou negativo) e a UI (geralmente z-index: 10+) */
+  pointer-events: none; /* CRÍTICO: não intercepta cliques em botões, links ou cards da UI principal! */
+  background: transparent;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 24px;
+}
+
+.three-card-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Molduras Editoriais de Fundo Ultra-Sutis */
+.three-card-bg-editorial-header {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0.18; /* Sutilíssimo para ficar em background */
+  transition: opacity 0.5s ease;
+}
+
+.three-card-background-canvas-wrapper:hover .three-card-bg-editorial-header {
+  opacity: 0.35;
+}
+
+.bg-editorial-tag {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+.three-card-bg-editorial-footer {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  right: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0.18;
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+  padding-top: 12px;
+  transition: opacity 0.5s ease;
+}
+
+.three-card-background-canvas-wrapper:hover .three-card-bg-editorial-footer {
+  opacity: 0.35;
+}
+
+.bg-player-side {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.bg-side-lbl {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+}
+
+.bg-ply-name {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.bg-divider {
+  width: 1px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Loading Overlay Tela Cheia */
+.three-card-loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(5, 5, 5, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+}
+
+.three-card-loader {
+  width: 36px;
+  height: 36px;
+  border: 2px solid rgba(255, 255, 255, 0.03);
+  border-top-color: var(--accent-light);
+  border-right-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.loading-text {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  animation: pulse 2.5s infinite ease-in-out;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.90; }
+}

@@ -367,6 +367,7 @@ class UserSquadPlayer(Base):
     # ── Metadados ──
     definition_id: Mapped[str] = mapped_column(String(50), nullable=False, comment="ID único da carta no EA FC")
     alternate_positions: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, comment="CSV de posições alternativas em PT: 'VOL,MC'")
+    playstyles_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="JSON array de playstyles do jogador importado")
     imported_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
 
     def __repr__(self) -> str:
@@ -504,6 +505,7 @@ class FCPlayer(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     futbin_id: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, comment="ID no Futbin")
+    ea_id: Mapped[Optional[str]] = mapped_column(String(50), unique=True, nullable=True, comment="ID no site da EA (DefinitionId)")
     
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     overall: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -517,6 +519,7 @@ class FCPlayer(Base):
     face_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     bg_url_raw: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="Link original do AVIF no Futbin")
     card_template_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="Link local PNG processado (fundo limpo)")
+    playstyles_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True, comment="JSON array de playstyles do jogador")
     
     scraped_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
 

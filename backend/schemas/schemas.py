@@ -235,6 +235,7 @@ class UserSquadPlayerResponse(BaseModel):
     is_excluded: bool = False
     definition_id: str
     alternate_positions: Optional[str] = None
+    playstyles_json: Optional[str] = None
     imported_at: Optional[datetime] = None
 
 

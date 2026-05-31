@@ -17,7 +17,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from typing import Optional, List
 
-from fastapi import FastAPI, Depends, UploadFile, File, HTTPException, Query
+from fastapi import FastAPI, Depends, UploadFile, File, HTTPException, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -304,6 +304,34 @@ async def search_card_image(
     }
 
 
+@app.get("/api/cards/all-images")
+async def list_all_card_images():
+    """
+    Retorna uma lista de todas as imagens de cartas de jogadores salvas fisicamente
+    no servidor estático, na pasta images/cards/full.
+    """
+    try:
+        import os
+        from pathlib import Path
+        
+        full_dir = Path("images/cards/full")
+        if not full_dir.exists():
+            return []
+            
+        images = []
+        for file in os.listdir(full_dir):
+            if file.endswith((".png", ".jpg", ".jpeg", ".webp")):
+                images.append({
+                    "name": file,
+                    "full_image_url": f"/images/cards/full/{file}",
+                    "small_image_url": f"/images/cards/small/{file}"
+                })
+        
+        return sorted(images, key=lambda x: x["name"])
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao listar imagens: {str(e)}")
+
+
 # ══════════════════════════════════════════════
 #  SBCs — Listagem e Detalhes
 # ══════════════════════════════════════════════
@@ -317,7 +345,10 @@ async def list_sbcs(
     from sqlalchemy.orm import selectinload
     query = (
         select(SBCSet)
-        .options(selectinload(SBCSet.player_card))  # Eager load player_card
+        .options(
+            selectinload(SBCSet.player_card),
+            selectinload(SBCSet.challenges)
+        )
         .order_by(SBCSet.scraped_at.desc())
     )
     if category:
@@ -421,6 +452,72 @@ async def list_scrape_sources():
     ]
 
 
+@app.post("/api/scrape/players/playstyles")
+async def start_ea_ratings_scraping(
+    background_tasks: BackgroundTasks,
+    pages: str = Query("1-3", description="Páginas a raspar. Ex: '1-3'"),
+    test_mode: bool = Query(False, description="Modo de teste rápido (apenas 5 jogadores)"),
+):
+    """Inicia a sincronização de playstyles da EA em background de forma isolada."""
+    from backend.services.futbin_service import _scrape_state
+    from backend.scripts.scrape_ea_ratings import main as run_ea_scraper
+    import re
+    from datetime import datetime, UTC
+    import logging
+    logger = logging.getLogger("help_dmes.main")
+    
+    status = get_scrape_status()
+    if status["status"] == "running":
+        raise HTTPException(status_code=400, detail="Scraping/Sincronização já em andamento.")
+        
+    def update_ea_progress(msg, done, total):
+        _scrape_state.update(
+            status="running",
+            message=f"EA Ratings: {msg}",
+            current=done,
+            total=total
+        )
+        
+    def parse_pages(pages_str: str) -> tuple[int, int]:
+        m = re.match(r"(\d+)[-–](\d+)", pages_str)
+        if m:
+            return int(m.group(1)), int(m.group(2))
+        return int(pages_str), int(pages_str)
+        
+    sp, ep = parse_pages(pages)
+    
+    async def run_in_background():
+        _scrape_state.update(
+            status="running",
+            message="EA Ratings: Iniciando sincronização em background...",
+            current=0,
+            total=100
+        )
+        try:
+            await run_ea_scraper(
+                start_page=sp,
+                end_page=ep,
+                test_mode=test_mode,
+                max_concurrent=15,
+                delay=0.5,
+                progress_callback=update_ea_progress
+            )
+            _scrape_state.update(
+                status="completed",
+                message=f"Coleta de Playstyles da EA concluída com sucesso (Páginas {pages})!",
+                last_scrape_at=datetime.now(UTC).isoformat()
+            )
+        except Exception as e:
+            logger.error(f"Erro na sincronização de playstyles da EA em background: {e}")
+            _scrape_state.update(
+                status="failed",
+                message=f"Falha na sincronização da EA: {e}"
+            )
+            
+    background_tasks.add_task(run_in_background)
+    return {"status": "started", "message": "Coleta e sincronização de Playstyles da EA iniciada em background."}
+
+
 @app.get("/api/health")
 async def health_check():
     """Verifica a saúde do sistema e conexão com banco."""
@@ -472,6 +569,7 @@ def _player_to_response(player) -> UserSquadPlayerResponse:
         is_in_active_11=player.is_in_active_11, is_excluded=player.is_excluded,
         definition_id=player.definition_id,
         alternate_positions=player.alternate_positions,
+        playstyles_json=player.playstyles_json,
         imported_at=player.imported_at,
     )
 
@@ -499,10 +597,19 @@ def _sbc_to_response(s: SBCSet) -> SBCSetResponse:
             playstyles_json=pc.playstyles_json,
         )
 
+    # Cálculo dinâmico do custo se total_cost for 0 ou nulo (soma dos desafios)
+    final_cost = s.total_cost
+    if not final_cost or final_cost == 0:
+        try:
+            # Soma os estimated_cost dos desafios que pertencem a este SBC
+            final_cost = sum(ch.estimated_cost for ch in s.challenges if ch.estimated_cost)
+        except Exception:
+            final_cost = 0
+
     return SBCSetResponse(
         id=s.id, futgg_id=s.futgg_id, name=s.name,
         description=s.description, category=s.category,
-        total_cost=s.total_cost, challenges_count=s.challenges_count,
+        total_cost=final_cost or None, challenges_count=s.challenges_count,
         expires_at=s.expires_at, expires_text=s.expires_text,
         is_repeatable=s.is_repeatable, repeatable_text=s.repeatable_text,
         refresh_text=s.refresh_text, raw_card_data=s.raw_card_data,
@@ -600,13 +707,99 @@ def _sbc_to_detail_response(sbc) -> SBCSetDetailResponse:
 
 
 async def _run_scraping_background():
-    """Executa scraping Futbin em background."""
+    """Executa scraping Futbin em background e na sequência sincroniza playstyles da EA Ratings com resiliência total."""
     import logging
     logger = logging.getLogger("help_dmes.main")
 
     from backend.core.database import get_session
-    from backend.services.futbin_service import scrape_all_sbcs
+    from backend.services.futbin_service import scrape_all_sbcs, _scrape_state
+    from backend.scripts.scrape_ea_ratings import main as run_ea_scraper
+    from datetime import datetime, UTC
 
-    async with get_session() as session:
-        result = await scrape_all_sbcs(session)
-        logger.info(f"Scraping finalizado: {result}")
+    futbin_success = False
+    futbin_error = None
+    ea_success = False
+    ea_error = None
+
+    # 1. Executar o scraping dos SBCs e cartas de SBC da Futbin (isolado)
+    try:
+        _scrape_state.update(
+            status="running",
+            message="Futbin: Iniciando raspagem dos SBCs...",
+            current=0,
+            total=100
+        )
+        async with get_session() as session:
+            futbin_res = await scrape_all_sbcs(session)
+            logger.info(f"Scraping Futbin concluído em background: {futbin_res}")
+            futbin_success = True
+    except Exception as e:
+        logger.error(f"Erro catastrófico durante o scraping dos SBCs da Futbin: {e}")
+        futbin_error = str(e)
+        futbin_success = False
+
+    # 2. Executar a coleta automática e sincronização de playstyles da EA Ratings (Pratas e Bronzes)
+    # Roda de forma totalmente independente de eventuais falhas do Futbin!
+    logger.info("Iniciando coleta automática de playstyles da EA Ratings em background...")
+    
+    # Callback para atualizar o estado do polling exibido no front-end em tempo real
+    def update_ea_progress(msg, done, total):
+        _scrape_state.update(
+            status="running",
+            message=f"EA Ratings: {msg}",
+            current=done,
+            total=total
+        )
+    
+    msg_prefix = f"(Aviso: Futbin falhou: {futbin_error}) " if not futbin_success else ""
+    _scrape_state.update(
+        status="running",
+        message=f"EA Ratings: Iniciando sincronização de playstyles... {msg_prefix}",
+        current=0,
+        total=100
+    )
+    
+    try:
+        # Executa o scraper da EA Ratings para as páginas 1 a 3 (sincronização padrão)
+        await run_ea_scraper(
+            start_page=1,
+            end_page=3,
+            test_mode=False,
+            max_concurrent=15,
+            delay=0.5,
+            progress_callback=update_ea_progress
+        )
+        logger.info("Coleta automática de playstyles da EA concluída com sucesso!")
+        ea_success = True
+    except Exception as e:
+        logger.error(f"Erro na coleta automática de playstyles da EA: {e}")
+        ea_error = str(e)
+        ea_success = False
+
+    # 3. Consolidação e definição de status e mensagem final
+    now_iso = datetime.now(UTC).isoformat()
+    if futbin_success and ea_success:
+        _scrape_state.update(
+            status="completed",
+            message="Sincronização Completa! Futbin SBCs e EA Ratings Playstyles atualizados com sucesso.",
+            last_scrape_at=now_iso
+        )
+    elif futbin_success and not ea_success:
+        _scrape_state.update(
+            status="completed",  # Concluiu parcialmente
+            message=f"Sincronização parcial: Futbin atualizado, mas EA Ratings falhou ({ea_error}).",
+            last_scrape_at=now_iso
+        )
+    elif not futbin_success and ea_success:
+        _scrape_state.update(
+            status="completed",  # Concluiu parcialmente
+            message=f"Sincronização parcial: EA Ratings atualizada, mas Futbin falhou ({futbin_error}).",
+            last_scrape_at=now_iso
+        )
+    else:
+        _scrape_state.update(
+            status="failed",
+            message=f"Sincronização falhou totalmente: Futbin ({futbin_error}) | EA ({ea_error}).",
+            last_scrape_at=now_iso
+        )
+

@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useApi } from '../../hooks/useApi';
 import GooeySearch from '../Search/GooeySearch';
 
-const thStyle = { padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.04em' };
-const tdStyle = { padding: '10px 16px', color: 'var(--text-primary)' };
 
 export default function SquadPage({ squadStats, onImportCSV }) {
   const api = useApi();
@@ -93,44 +91,60 @@ export default function SquadPage({ squadStats, onImportCSV }) {
 
 
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+            <table className="premium-table">
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-tertiary)' }}>
-                  <th style={thStyle}>OVR</th>
-                  <th style={thStyle}>Nome</th>
-                  <th style={thStyle}>Posição</th>
-                  <th style={thStyle}>Raridade</th>
-                  <th style={thStyle}>Liga</th>
-                  <th style={thStyle}>Nação</th>
-                  <th style={thStyle}>Status</th>
-                  <th style={thStyle}>Ação</th>
+                <tr>
+                  <th>OVR</th>
+                  <th>Nome</th>
+                  <th>Posição</th>
+                  <th>Raridade</th>
+                  <th>Liga</th>
+                  <th>Nação</th>
+                  <th>Status</th>
+                  <th>Ação</th>
                 </tr>
               </thead>
               <tbody>
                 {squad.slice(0, 100).map(player => (
                   <tr
                     key={player.id}
+                    className="table-row-hover"
                     style={{
-                      borderBottom: '1px solid var(--border)',
-                      opacity: player.is_excluded || player.is_loan ? 0.4 : 1,
+                      opacity: player.is_excluded || player.is_loan ? 0.45 : 1,
                       transition: 'opacity 0.2s',
                     }}
                   >
-                    <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', color: 'var(--accent)', fontWeight: 700 }}>
+                    <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', fontWeight: 800 }}>
                       {player.rating}
                     </td>
-                    <td style={{ ...tdStyle, fontWeight: 600 }}>{player.name}</td>
-                    <td style={tdStyle}>{player.preferred_position}</td>
-                    <td style={{ ...tdStyle, fontSize: '0.8rem' }}>{player.rarity}</td>
-                    <td style={{ ...tdStyle, fontSize: '0.8rem' }}>{player.league}</td>
-                    <td style={tdStyle}>{player.nation}</td>
-                    <td style={tdStyle}>
-                      {player.is_loan && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>🔒 Empréstimo</span>}
-                      {player.is_in_active_11 && !player.is_loan && <span style={{ color: 'var(--warning)', fontSize: '0.75rem' }}>⭐ Titular</span>}
-                      {player.is_duplicate && <span style={{ color: 'var(--info)', fontSize: '0.75rem' }}>📋 Duplicata</span>}
-                      {!player.is_loan && !player.is_in_active_11 && !player.is_duplicate && <span className="text-muted" style={{ fontSize: '0.75rem' }}>—</span>}
+                    <td style={{ fontWeight: 600 }}>{player.name}</td>
+                    <td>
+                      <span className="badge-position">{player.preferred_position}</span>
                     </td>
-                    <td style={tdStyle}>
+                    <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{player.rarity}</td>
+                    <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{player.league}</td>
+                    <td>{player.nation}</td>
+                    <td>
+                      {player.is_loan && (
+                        <span className="badge-reason" style={{ color: 'var(--danger)', borderColor: 'rgba(223, 58, 58, 0.15)', background: 'rgba(223, 58, 58, 0.06)' }}>
+                          🔒 Empréstimo
+                        </span>
+                      )}
+                      {player.is_in_active_11 && !player.is_loan && (
+                        <span className="badge-reason" style={{ color: 'var(--warning)', borderColor: 'rgba(245, 159, 10, 0.15)', background: 'rgba(245, 159, 10, 0.06)' }}>
+                          ⭐ Titular
+                        </span>
+                      )}
+                      {player.is_duplicate && (
+                        <span className="badge-reason duplicate">
+                          📋 Duplicata
+                        </span>
+                      )}
+                      {!player.is_loan && !player.is_in_active_11 && !player.is_duplicate && (
+                        <span className="text-muted">—</span>
+                      )}
+                    </td>
+                    <td>
                       {!player.is_loan && (
                         <button
                           className={`btn ${player.is_excluded ? 'btn-secondary' : 'btn-danger'}`}

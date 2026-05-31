@@ -1,7 +1,8 @@
 .tilt-card-container {
   position: relative;
-  width: 252px;
-  height: 353px;
+  width: fit-content;
+  height: fit-content;
+  display: inline-block;
   transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
   transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
   transform-style: preserve-3d;
@@ -12,41 +13,9 @@
   overflow: visible; /* Mantém detalhes fora da caixa visíveis */
 }
 
-/* Reflexo Holográfico Dinâmico que segue a luz do cursor */
-.tilt-card-shine {
-  display: none !important;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  border-radius: 12px;
-  /* Um feixe de brilho sutil varrendo a diagonal de acordo com o cursor */
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0) calc(var(--mx, 50%) - 12%),
-    rgba(255, 255, 255, 0.08) calc(var(--mx, 50%) - 6%),
-    rgba(255, 255, 255, 0.16) var(--mx, 50%),
-    rgba(255, 255, 255, 0.08) calc(var(--mx, 50%) + 6%),
-    rgba(255, 255, 255, 0) calc(var(--mx, 50%) + 12%),
-    rgba(255, 255, 255, 0) 100%
-  );
-  z-index: 5;
-  pointer-events: none;
-  mix-blend-mode: color-dodge;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  will-change: background, opacity;
-}
-
-.tilt-card-container:hover .tilt-card-shine {
-  opacity: 1;
-}
-
 .tilt-card-content {
   width: 100%;
   height: 100%;
-  transform: translateZ(12px); /* Cria o efeito 3D Parallax interno */
+  transform: translateZ(30px); /* Aumentado para intensificar o efeito 3D Parallax interno */
   transform-style: preserve-3d;
 }

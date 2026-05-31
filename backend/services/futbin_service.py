@@ -701,7 +701,10 @@ async def _fetch_and_parse_player(session: aiohttp.ClientSession, url: str) -> d
         # 2. Club, Nation, League
         nation = soup.select_one('img[src*="nation/"]')
         club = soup.select_one('img[src*="clubs/"]')
-        league = soup.select_one('img[src*="cards/tiny/"]') # some leagues have "leagues_live" etc.
+        league = soup.select_one('img[src*="leagues/"], img[src*="league_logo"], img[src*="cards/tiny/"]')
+        
+        if not league:
+            logger.warning(f"Liga não encontrada na página HD do Futbin: {url}")
         
         if nation:
             data['nation_url'] = nation.get('src', '')
@@ -738,14 +741,54 @@ async def _fetch_and_parse_player(session: aiohttp.ClientSession, url: str) -> d
         wr_div = soup.find(string="Work Rate")
         if wr_div and wr_div.parent and wr_div.parent.find_next_sibling():
             data['workrates'] = wr_div.parent.find_next_sibling().get_text(strip=True)
-            
         pos_div = soup.find(string="Alt Pos")
         if pos_div and pos_div.parent and pos_div.parent.find_next_sibling():
             data['alt_positions'] = pos_div.parent.find_next_sibling().get_text(strip=True)
 
+        # 5. Extração direta de 30 Sub-atributos (Blindando contra a SoFIFA)
+        sub_map = {
+            "Acceleration": "acceleration", "Sprint Speed": "sprint_speed",
+            "Finishing": "finishing", "Shot Power": "shot_power",
+            "Long Shots": "long_shots", "Volleys": "volleys",
+            "Positioning": "positioning_att", "Penalties": "penalties",
+            "Short Passing": "short_passing", "Long Passing": "long_passing",
+            "Crossing": "crossing", "Curve": "curve",
+            "FK Accuracy": "free_kick", "Free Kick Accuracy": "free_kick",
+            "Vision": "vision",
+            "Agility": "agility", "Balance": "balance",
+            "Reactions": "reactions", "Ball Control": "ball_control",
+            "Composure": "composure", "Dribbling": "skill_dribbling",
+            "Interceptions": "interceptions", "Heading Accuracy": "heading",
+            "Heading": "heading", "Def Awareness": "marking",
+            "Defensive Awareness": "marking", "Marking": "marking",
+            "Standing Tackle": "standing_tackle", "Sliding Tackle": "sliding_tackle",
+            "Jumping": "jumping", "Stamina": "stamina",
+            "Strength": "strength", "Aggression": "aggression",
+            "GK Diving": "gk_diving", "GK Handling": "gk_handling",
+            "GK Kicking": "gk_kicking", "GK Positioning": "gk_positioning",
+            "GK Reflexes": "gk_reflexes",
+        }
+        
+        def safe_int(val):
+            try:
+                return int(str(val).strip())
+            except Exception:
+                return None
+                
+        for stat_row in soup.select(".player-stat-row"):
+            name_el = stat_row.select_one(".player-stat-name")
+            val_el = stat_row.select_one(".player-stat-value")
+            if name_el and val_el:
+                label = name_el.get_text(strip=True)
+                col = sub_map.get(label)
+                if col and col not in data:
+                    val = safe_int(val_el.get_text(strip=True))
+                    if val and 1 <= val <= 99:
+                        data[col] = val
+
         return data
     except Exception as e:
-        logger.error(f"Erro ao parsear player HD em {url}: {e}")
+        logger.error(f"Erro ao processar página do jogador {player_url}: {e}")
         return {}
 
 
@@ -901,6 +944,21 @@ async def _process_single_sbc(
                 if hd_data.get('playstyles'):
                     player_card.playstyles_json = json.dumps(hd_data['playstyles'])
 
+                # Passar sub-atributos extraídos do Futbin para a carta
+                for field in [
+                    "acceleration", "sprint_speed", "finishing", "shot_power",
+                    "long_shots", "volleys", "positioning_att",
+                    "short_passing", "long_passing", "crossing", "curve",
+                    "free_kick", "vision", "agility", "balance", "reactions",
+                    "ball_control", "composure", "skill_dribbling",
+                    "interceptions", "heading", "marking",
+                    "standing_tackle", "sliding_tackle",
+                    "jumping", "stamina", "strength", "aggression", "penalties",
+                    "gk_diving", "gk_handling", "gk_kicking", "gk_positioning", "gk_reflexes"
+                ]:
+                    if hd_data.get(field) is not None:
+                        setattr(player_card, field, hd_data[field])
+
                 # Compor nome do arquivo físico sanitizado
                 from backend.services.scraping_utils import sanitize_filename_part, create_thumbnail
                 from backend.services.image_processor import remove_white_background_inplace
@@ -1032,18 +1090,24 @@ async def _enrich_with_sofifa(
             return
 
         # Preencher campos do PlayerCard com dados SoFIFA
-        if not player_card.overall or player_card.overall == 0:
+        if player_card.overall is None or player_card.overall == 0:
             player_card.overall = data.get("overall", 0)
         if not player_card.position:
             player_card.position = data.get("position")
 
         # Face stats
-        player_card.pace = data.get("pace")
-        player_card.shooting = data.get("shooting")
-        player_card.passing = data.get("passing")
-        player_card.dribbling_stat = data.get("dribbling_face")
-        player_card.defending = data.get("defending")
-        player_card.physic = data.get("physic")
+        if player_card.pace is None:
+            player_card.pace = data.get("pace")
+        if player_card.shooting is None:
+            player_card.shooting = data.get("shooting")
+        if player_card.passing is None:
+            player_card.passing = data.get("passing")
+        if player_card.dribbling_stat is None:
+            player_card.dribbling_stat = data.get("dribbling_face")
+        if player_card.defending is None:
+            player_card.defending = data.get("defending")
+        if player_card.physic is None:
+            player_card.physic = data.get("physic")
 
         # Sub-atributos (30)
         for field in [
@@ -1057,13 +1121,13 @@ async def _enrich_with_sofifa(
             "jumping", "stamina", "strength", "aggression", "penalties",
         ]:
             val = data.get(field)
-            if val is not None:
+            if val is not None and getattr(player_card, field, None) is None:
                 setattr(player_card, field, val)
 
         # GK stats
         for gk_field in ["gk_diving", "gk_handling", "gk_kicking", "gk_positioning", "gk_reflexes"]:
             val = data.get(gk_field)
-            if val is not None:
+            if val is not None and getattr(player_card, gk_field, None) is None:
                 setattr(player_card, gk_field, val)
 
         # Metadados biográficos (não sobrescrever se já preenchido pelo Futbin)
@@ -1075,8 +1139,18 @@ async def _enrich_with_sofifa(
         player_card.height = data.get("height")
         player_card.weight = data.get("weight")
         player_card.age = data.get("age")
-        player_card.country = data.get("country")
-        player_card.country_id = data.get("country_id")
+        if not player_card.country:
+            player_card.country = data.get("country")
+        if not player_card.country_id:
+            player_card.country_id = data.get("country_id")
+        if not player_card.club_name:
+            player_card.club_name = data.get("club") or data.get("club_name")
+        if not player_card.club_id:
+            player_card.club_id = data.get("club_id")
+        if not player_card.league_name:
+            player_card.league_name = data.get("league") or data.get("league_name")
+        if not player_card.league_id:
+            player_card.league_id = data.get("league_id")
         if not player_card.alt_positions and data.get("alt_positions"):
             player_card.alt_positions = data["alt_positions"]
 

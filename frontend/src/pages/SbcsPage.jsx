@@ -17,7 +17,6 @@ import { useApi } from '../hooks/useApi';
 import FutbinCardTilt from '../components/FutbinCardTilt';
 import GooeySearch from '../components/Search/GooeySearch';
 
-
 // Componente de Dropdown Customizado Premium (Cyberpunk/Glassmorphism)
 function PremiumDropdown({ value, onChange, options }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -44,11 +43,11 @@ function PremiumDropdown({ value, onChange, options }) {
       >
         <span>{selectedOption.label}</span>
         <ChevronDown 
-          size={16} 
+          size={14} 
           style={{ 
             transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-            color: 'var(--accent)'
+            color: 'var(--text-secondary)'
           }} 
         />
       </button>
@@ -81,8 +80,61 @@ function PremiumDropdown({ value, onChange, options }) {
   );
 }
 
-// Componente SbcCard separado para gerenciar estado de expansão
-function SbcCard({ sbc, api, onNavigate }) {
+// Componente de CostSlider Refatorado de Forma Minimalista
+function CostSlider({ initialValue, onChangeFinished }) {
+  const [localCost, setLocalCost] = useState(initialValue);
+  const timeoutRef = useRef(null);
+
+  useEffect(() => {
+    setLocalCost(initialValue);
+  }, [initialValue]);
+
+  const handleSliderChange = (e) => {
+    const val = Number(e.target.value);
+    setLocalCost(val);
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      onChangeFinished(val);
+    }, 150);
+  };
+
+  const percent = (localCost / 2000000) * 100;
+
+  return (
+    <div className="cyber-cost-slider">
+      <div className="slider-meta-header">
+        <span className="slider-title font-mono">CUSTO MÁXIMO</span>
+        <span className="slider-value font-mono">
+          {localCost >= 2000000 ? 'AO INFINITO E ALÉM' : `${localCost.toLocaleString('pt-BR')} 🪙`}
+        </span>
+      </div>
+      <div className="slider-track-container">
+        <input 
+          type="range"
+          min="0"
+          max="2000000"
+          step="10000"
+          value={localCost}
+          onChange={handleSliderChange}
+          className="cyber-range-input"
+          style={{ '--percent': `${percent}%` }}
+        />
+        <div className="slider-tick-labels font-mono">
+          <span>0</span>
+          <span>1M</span>
+          <span>2M</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Card SBC Destacado (FeaturedSbcCard) - Layout Horizontal de Revista de Luxo
+function FeaturedSbcCard({ sbc, api, onNavigate }) {
   const [expanded, setExpanded] = useState(false);
   const [details, setDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -110,7 +162,7 @@ function SbcCard({ sbc, api, onNavigate }) {
       .replace('hours', 'h').replace('hour', 'h')
       .replace('mins', 'min').replace('min', 'min');
       
-    return `Expira em: ${ptText}`;
+    return ptText;
   };
 
   const handleExpand = async (e) => {
@@ -129,9 +181,6 @@ function SbcCard({ sbc, api, onNavigate }) {
     setExpanded(!expanded);
   };
 
-  const isChallenge = sbc.category === 'Challenges';
-  const isUpgrade = sbc.category === 'Upgrades';
-
   const getImageUrl = (url) => {
     if (!url) return null;
     if (url.startsWith('http')) return url.replace('cdn3.futbin.com', 'cdn.futbin.com');
@@ -139,9 +188,7 @@ function SbcCard({ sbc, api, onNavigate }) {
     return `${api.API_BASE}/${url}`;
   };
 
-  // Priorizar imagem da carta do jogador (sempre versão FULL local em alta definição do console)
   const rawCardImageUrl = sbc.player_card?.card_image_url || details?.player_card?.card_image_url;
-  // rawCardImageUrl é válido como card HD apenas se for um arquivo local de /full/ ou fc_player_ ou sbc_player_
   const isRawCardHD = rawCardImageUrl && !rawCardImageUrl.includes('/sbcs/') && (
     rawCardImageUrl.includes('/full/') || rawCardImageUrl.includes('fc_player_') || rawCardImageUrl.includes('sbc_player_')
   );
@@ -149,7 +196,6 @@ function SbcCard({ sbc, api, onNavigate }) {
     ? getImageUrl(rawCardImageUrl.replace('/small/', '/full/')) 
     : getImageUrl(sbc.image_url);
 
-  // Estado resiliente para gerenciar a imagem de fallback ou card HD físico
   const [cardImgSrc, setCardImgSrc] = useState(cardImage);
 
   useEffect(() => {
@@ -165,215 +211,125 @@ function SbcCard({ sbc, api, onNavigate }) {
     }
   };
 
-  return (
-    <motion.div 
-      layout
-      whileHover={{ y: -6, transition: { duration: 0.2 } }}
-      className={`card sbc-card ${expanded ? 'expanded' : ''}`}
-    >
-      
-      {/* Header com Brilho Superior */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        padding: '12px 16px', 
-        background: 'transparent', 
-        borderBottom: '1px solid rgba(255,255,255,0.02)',
-        position: 'relative'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {sbc.is_new && (
-            <motion.span 
-              animate={{ opacity: [0.7, 1, 0.7] }}
-              transition={{ repeat: Infinity, duration: 2 }}
-              style={{ 
-                background: 'var(--accent)', 
-                color: '#000', 
-                fontSize: '0.6rem', 
-                padding: '2px 6px', 
-                borderRadius: 4, 
-                fontWeight: 800, 
-                letterSpacing: '0.05em',
-                boxShadow: '0 0 10px rgba(var(--accent-rgb), 0.4)'
-              }}
-            >
-              NOVO
-            </motion.span>
-          )}
-          <div style={{ 
-            fontWeight: 700, 
-            fontSize: '1rem', 
-            color: 'var(--text-primary)', 
-            whiteSpace: 'nowrap', 
-            overflow: 'hidden', 
-            textOverflow: 'ellipsis', 
-            maxWidth: '180px',
-            letterSpacing: '-0.02em'
-          }} title={sbc.name}>
-            {sbc.name}
-          </div>
-        </div>
-        <div className="text-mono" style={{ 
-          color: 'var(--warning)', 
-          fontWeight: 700, 
-          fontSize: '1rem', 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 6,
-          background: 'rgba(255, 184, 0, 0.05)',
-          padding: '4px 8px',
-          borderRadius: 6,
-          border: '1px solid rgba(255, 184, 0, 0.1)'
-        }}>
-          {sbc.total_cost > 0 ? sbc.total_cost.toLocaleString('pt-BR') : '0'} 
-          <Coins size={14} style={{ color: 'var(--warning)' }} />
-        </div>
-      </div>
+  const expiresText = formatExpiresText(sbc.expires_text || getExpiresText(sbc.expires_at));
 
-      {/* Body */}
-      <div style={{ display: 'flex', padding: '16px', gap: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
-        {/* Left: Player Card */}
-        <div className="neon-border-wrapper">
+  return (
+    <div className={`featured-sbc-card ${expanded ? 'expanded' : ''}`}>
+      <div className="featured-card-body">
+        {/* Lado Esquerdo: Player Card (Compactado e com tilt 3D) */}
+        <div className="featured-card-visual">
           <FutbinCardTilt>
-            <div style={{ 
-              width: '252px', 
-              height: '353px',
-              flexShrink: 0, 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              background: cardImage ? 'transparent' : 'linear-gradient(145deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
-              borderRadius: 12,
-              border: cardImage ? 'none' : '1px solid rgba(255,255,255,0.08)',
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
+            <div className="featured-card-frame">
               {cardImgSrc ? (
                 <motion.img 
                   layoutId={`img-${sbc.id}`}
-                  whileHover={{ scale: 1.05 }}
                   src={cardImgSrc} 
                   alt={sbc.name} 
                   onError={handleImgError}
                   referrerPolicy="no-referrer"
-                  style={{ width: '100%', height: '100%', objectFit: 'contain', zIndex: 2 }} 
+                  className="featured-card-image"
                 />
               ) : (
-                <LayoutGrid size={80} strokeWidth={1} style={{ opacity: 0.2 }} />
-              )}
-              {!cardImage && details?.player_card_full && (
-                <div style={{ 
-                  position: 'absolute', 
-                  top: 12, 
-                  right: 12, 
-                  background: 'var(--accent)', 
-                  color: '#000', 
-                  fontSize: '1.6rem', 
-                  fontWeight: 900, 
-                  padding: '2px 10px', 
-                  borderRadius: 6, 
-                  zIndex: 3 
-                }}>
-                  {details.player_card_full.overall}
-                </div>
+                <LayoutGrid size={50} strokeWidth={1} style={{ opacity: 0.15, color: 'var(--text-secondary)' }} />
               )}
             </div>
           </FutbinCardTilt>
         </div>
-        {/* Right: Info Content */}
-        <div style={{ flex: 1, minWidth: '200px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ 
-            fontSize: '1rem', 
-            color: 'var(--text-secondary)', 
-            lineHeight: 1.5, 
-            display: '-webkit-box', 
-            WebkitLineClamp: 6, 
-            WebkitBoxOrient: 'vertical', 
-            overflow: 'hidden' 
-          }} title={sbc.description}>
-             {sbc.description || 'Complete este desafio para ganhar recompensas exclusivas.'}
+
+        {/* Lado Direito: Info Content */}
+        <div className="featured-card-info">
+          {/* Header */}
+          <div className="featured-info-header">
+            <div className="featured-title-row">
+              {sbc.is_new && (
+                <span className="featured-new-badge font-mono">NOVO</span>
+              )}
+              <h2 className="featured-name font-serif italic" title={sbc.name}>
+                {sbc.name}
+              </h2>
+            </div>
+            <div className="featured-cost font-mono">
+              <span>{sbc.total_cost > 0 ? sbc.total_cost.toLocaleString('pt-BR') : '0'}</span>
+              <Coins size={14} style={{ color: 'var(--warning)' }} />
+            </div>
           </div>
 
-          {/* Reward Strip (Miniaturas de recompensas) */}
-          <div style={{ display: 'flex', gap: 8, height: 48, overflow: 'hidden' }}>
-             {((details?.rewards || []).length > 0) ? (
-               details.rewards.map((r, i) => (
-                 <img 
-                   key={i} 
-                   src={getImageUrl(r.image_url)} 
-                   title={r.name} 
-                   referrerPolicy="no-referrer"
-                   style={{ height: '100%', width: 'auto', borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)' }} 
-                 />
-               ))
-             ) : (
-               <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                 <Box size={14} /> {sbc.category}
-               </div>
-             )}
-          </div>
-          
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: '1fr 1fr', 
-            gap: '16px', 
-            marginTop: 'auto'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ padding: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
-                <Trophy size={20} className="text-muted" />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-primary)' }}>{sbc.challenges_count}</span>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em' }}>DESAFIOS</span>
-              </div>
+          {/* Descrição */}
+          <p className="featured-description font-sans">
+            {sbc.description || 'Desafio especial para a obtenção de itens de jogador de alto nível no mercado.'}
+          </p>
+
+          {/* Recompensa & Metadados */}
+          <div className="featured-metadata-row">
+            {/* Rewards */}
+            <div className="featured-rewards-strip">
+              {((details?.rewards || []).length > 0) ? (
+                details.rewards.map((r, i) => (
+                  <img 
+                    key={i} 
+                    src={getImageUrl(r.image_url)} 
+                    title={r.name} 
+                    alt={r.name}
+                    referrerPolicy="no-referrer"
+                    className="featured-reward-img"
+                  />
+                ))
+              ) : (
+                <div className="featured-category-badge font-mono">
+                  <Box size={12} />
+                  <span>{sbc.category.toUpperCase()}</span>
+                </div>
+              )}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              {formatExpiresText(sbc.expires_text || getExpiresText(sbc.expires_at)) && (
-                <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  ⏱️ {formatExpiresText(sbc.expires_text || getExpiresText(sbc.expires_at))}
-                </span>
+
+            {/* Desafios e Expiração */}
+            <div className="featured-stats-group font-mono">
+              <div className="featured-stat-item">
+                <Trophy size={13} />
+                <span>{sbc.challenges_count} {sbc.challenges_count === 1 ? 'DESAFIO' : 'DESAFIOS'}</span>
+              </div>
+              {expiresText && (
+                <div className="featured-stat-item warn">
+                  <Clock size={13} />
+                  <span>{expiresText.toUpperCase()}</span>
+                </div>
               )}
             </div>
           </div>
+
+          {/* Actions */}
+          <div className="featured-actions-row">
+            <div className="featured-badges-left">
+              {sbc.is_repeatable && (
+                <span className="badge-repeatable font-mono">
+                  <RotateCcw size={10} /> REPETÍVEL
+                </span>
+              )}
+              {sbc.refresh_text && (
+                <span className="badge-refresh font-mono">
+                  <Sparkles size={10} /> RENOVA
+                </span>
+              )}
+            </div>
+            <button 
+              type="button" 
+              className="featured-expand-btn font-mono" 
+              onClick={handleExpand}
+            >
+              <span>{expanded ? 'OCULTAR' : 'DETALHES'}</span>
+              <ChevronDown 
+                size={14} 
+                style={{ 
+                  transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.25s var(--ease-cinematic)'
+                }} 
+              />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Footer Info / Expand Trigger */}
-      <div 
-        onClick={handleExpand}
-        style={{ 
-          padding: '10px 16px', 
-          borderTop: '1px solid rgba(255,255,255,0.02)', 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          cursor: 'pointer',
-          background: expanded ? 'rgba(var(--accent-rgb), 0.02)' : 'transparent'
-        }}
-      >
-        <div style={{ display: 'flex', gap: 12 }}>
-          {sbc.is_repeatable && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <RotateCcw size={10} style={{ color: 'var(--accent)' }} />
-              <span style={{ fontSize: '0.65rem', color: 'var(--accent)', fontWeight: 700 }}>REPETÍVEL</span>
-            </div>
-          )}
-          {sbc.refresh_text && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <Sparkles size={10} style={{ color: 'var(--warning)' }} />
-              <span style={{ fontSize: '0.65rem', color: 'var(--warning)', fontWeight: 700 }}>RENOVA EM BREVE</span>
-            </div>
-          )}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 600 }}>
-          {expanded ? 'Ocultar' : 'Detalhes'}
-          {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-        </div>
-      </div>
-
-      {/* Expanded details with Framer Motion */}
+      {/* Detalhes Expandidos com Animação */}
       <AnimatePresence>
         {expanded && (
           <motion.div 
@@ -381,227 +337,70 @@ function SbcCard({ sbc, api, onNavigate }) {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            style={{ overflow: 'hidden' }}
+            className="featured-expanded-panel"
           >
-            <div style={{ padding: '0 16px 16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {loadingDetails ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div className="skeleton" style={{ height: 40, width: '100%', borderRadius: 8 }}></div>
-                    <div className="skeleton" style={{ height: 40, width: '100%', borderRadius: 8 }}></div>
-                  </div>
-                ) : details && details.challenges && details.challenges.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {details.challenges.map((c, idx) => (
-                      <motion.div 
-                        initial={{ x: -10, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        transition={{ delay: idx * 0.05 }}
-                        key={c.id || c.name} 
-                        style={{ 
-                          fontSize: '0.8rem', 
-                          background: 'rgba(255,255,255,0.03)', 
-                          padding: '10px 12px', 
-                          borderRadius: 8, 
-                          border: '1px solid rgba(255,255,255,0.05)' 
-                        }}
-                      >
-                        <div style={{ fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ color: 'var(--text-primary)' }}>{c.name}</span>
-                          <span className="text-mono" style={{ color: 'var(--warning)', fontSize: '0.85rem' }}>
-                            {c.estimated_cost > 0 ? `${c.estimated_cost.toLocaleString('pt-BR')} 🪙` : ''}
-                          </span>
+            <div className="expanded-inner-content">
+              {loadingDetails ? (
+                <div className="expanded-skeleton-loader">
+                  <div className="skeleton-bar"></div>
+                  <div className="skeleton-bar short"></div>
+                </div>
+              ) : details && details.challenges && details.challenges.length > 0 ? (
+                <div className="expanded-challenges-list">
+                  {details.challenges.map((c, idx) => (
+                    <motion.div 
+                      initial={{ x: -10, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: idx * 0.05 }}
+                      key={c.id || c.name} 
+                      className="expanded-challenge-row"
+                    >
+                      <div className="challenge-main-info font-mono">
+                        <span className="challenge-name">{c.name}</span>
+                        <span className="challenge-cost">
+                          {c.estimated_cost > 0 ? `${c.estimated_cost.toLocaleString('pt-BR')} 🪙` : 'Requisitos Especiais'}
+                        </span>
+                      </div>
+                      {c.rewards && c.rewards.length > 0 && (
+                        <div className="challenge-rewards-row">
+                          {c.rewards.map((r, ri) => (
+                            <div key={ri} className="challenge-reward-pill font-mono">
+                              {r.image_url && <img src={getImageUrl(r.image_url)} referrerPolicy="no-referrer" alt="" />}
+                              <span>{r.name}</span>
+                            </div>
+                          ))}
                         </div>
-                        {c.rewards && c.rewards.length > 0 && (
-                          <div style={{ marginTop: 8, display: 'flex', gap: 6, alignItems: 'center' }}>
-                             {c.rewards.map((r, ri) => (
-                               <div key={ri} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,0.02)', padding: '2px 6px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.05)' }}>
-                                 {r.image_url && <img src={getImageUrl(r.image_url)} referrerPolicy="no-referrer" style={{ height: 16, width: 'auto' }} />}
-                                 <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{r.name}</span>
-                               </div>
-                             ))}
-                          </div>
-                        )}
-                      </motion.div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: '0.8rem', textAlign: 'center', padding: '20px 0', opacity: 0.5 }}>
-                    <Info size={24} style={{ margin: '0 auto 8px', display: 'block' }} />
-                    Clique em Calcular para ver os requisitos.
-                  </div>
-                )}
-                
-                <motion.button 
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="btn btn-primary" 
-                  style={{ 
-                    marginTop: 8, 
-                    width: '100%', 
-                    height: '42px',
-                    fontSize: '0.9rem',
-                    fontWeight: 700,
-                    boxShadow: '0 4px 15px rgba(var(--accent-rgb), 0.2)'
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    localStorage.setItem('selected_sbc_id', sbc.id);
-                    onNavigate('calculator');
-                  }}
-                >
-                  <Sparkles size={16} style={{ marginRight: 8 }} />
-                  OTIMIZAR ELENCO
-                </motion.button>
-              </div>
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="expanded-empty-state font-mono">
+                  <Info size={14} />
+                  <span>Clique em calcular rota para otimizar.</span>
+                </div>
+              )}
+              
+              <button 
+                type="button"
+                className="expanded-calc-btn font-mono"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  localStorage.setItem('selected_sbc_id', sbc.id);
+                  onNavigate('calculator');
+                }}
+              >
+                CALCULAR ROTA DE OTIMIZAÇÃO
+              </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
-  );
-}
-
-// Skeleton para os cards enquanto carregam
-function SbcCardSkeleton() {
-  return (
-    <div className="card sbc-card" style={{ opacity: 0.4 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'transparent', borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
-        <div className="skeleton" style={{ height: 20, width: '60%', borderRadius: 4 }}></div>
-        <div className="skeleton" style={{ height: 20, width: 60, borderRadius: 4 }}></div>
-      </div>
-      <div style={{ display: 'flex', padding: '16px', gap: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
-        <div className="skeleton" style={{ width: '252px', height: '353px', borderRadius: 12, flexShrink: 0 }}></div>
-        <div style={{ flex: 1, minWidth: '200px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div className="skeleton" style={{ height: 16, width: '100%', borderRadius: 4 }}></div>
-          <div className="skeleton" style={{ height: 16, width: '80%', borderRadius: 4 }}></div>
-          <div className="skeleton" style={{ height: 16, width: '50%', borderRadius: 4 }}></div>
-          <div style={{ marginTop: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', background: 'rgba(0,0,0,0.1)', padding: '12px', borderRadius: 8 }}>
-             <div className="skeleton" style={{ height: 32, width: '100%', borderRadius: 4 }}></div>
-             <div className="skeleton" style={{ height: 32, width: '100%', borderRadius: 4 }}></div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
 
-// Componente isolado para o Slider de Custo, garantindo 60 FPS e física de mola real de rotação
-function CostSlider({ initialValue, onChangeFinished }) {
-  const [localCost, setLocalCost] = useState(initialValue);
-  const timeoutRef = useRef(null);
 
-  // Referências para a física de mola elástica (spring physics)
-  const percentRef = useRef((initialValue / 2000000) * 100);
-  const currentRotationRef = useRef(0);
-  const targetRotationRef = useRef(0);
-  const velocityRef = useRef(0);
-  const animFrameRef = useRef(null);
-  const tooltipRef = useRef(null);
-
-  useEffect(() => {
-    setLocalCost(initialValue);
-    percentRef.current = (initialValue / 2000000) * 100;
-  }, [initialValue]);
-
-  // Loop de física elástica rodando a 60 FPS nativos
-  useEffect(() => {
-    const updatePhysics = () => {
-      const diff = targetRotationRef.current - currentRotationRef.current;
-      
-      // Equação física: força elástica com rigidez de 0.12 e amortecimento de 0.82
-      const force = diff * 0.12;
-      velocityRef.current = (velocityRef.current + force) * 0.82;
-      currentRotationRef.current += velocityRef.current;
-
-      // Suaviza a rotação de volta a 0 quando o arraste cessa
-      targetRotationRef.current *= 0.90;
-
-      // Escreve diretamente no DOM para performance extrema a 60 FPS cravados
-      if (tooltipRef.current) {
-        const percent = percentRef.current;
-        tooltipRef.current.style.left = `${percent}%`;
-        tooltipRef.current.style.transform = `translateX(-50%) rotate(${currentRotationRef.current}deg)`;
-      }
-
-      animFrameRef.current = requestAnimationFrame(updatePhysics);
-    };
-
-    animFrameRef.current = requestAnimationFrame(updatePhysics);
-
-    return () => {
-      if (animFrameRef.current) {
-        cancelAnimationFrame(animFrameRef.current);
-      }
-    };
-  }, []);
-
-  const handleSliderChange = (e) => {
-    const val = Number(e.target.value);
-    setLocalCost(val);
-
-    // Calcula a variação de posição física (deltaPercent) para alimentar a mola inercial
-    const nextPercent = (val / 2000000) * 100;
-    const deltaPercent = nextPercent - percentRef.current;
-    percentRef.current = nextPercent;
-
-    // A rotação alvo do balão de diálogo é calculada com base na direção e velocidade do arraste
-    let targetRot = -deltaPercent * 3.5;
-    targetRot = Math.max(-35, Math.min(35, targetRot)); // Trava em 35 graus para segurança estética
-    targetRotationRef.current = targetRot;
-
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-
-    timeoutRef.current = setTimeout(() => {
-      onChangeFinished(val);
-    }, 150);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
-
-  const percent = (localCost / 2000000) * 100;
-
-  return (
-    <label className="cost-slider-label-wrapper">
-      <div className="cost-slider-header">
-        <span>CUSTO MÁXIMO</span>
-        <span className="highlight">
-          {localCost >= 2000000 ? 'Qualquer Custo' : `${localCost.toLocaleString('pt-BR')} 🪙`}
-        </span>
-      </div>
-      <div className="cost-slider-input-container">
-        <input 
-          type="range"
-          min="0"
-          max="2000000"
-          step="1000"
-          value={localCost}
-          onChange={handleSliderChange}
-          className="neon-slider-premium"
-          style={{ '--percent': `${percent}%` }}
-        />
-        <output 
-          ref={tooltipRef}
-          className="neon-slider-tooltip-bubble"
-          style={{
-            left: `${percent}%`,
-            transform: `translateX(-50%) rotate(0deg)`
-          }}
-        >
-          {localCost >= 2000000 ? 'Qualquer Custo' : `${localCost.toLocaleString('pt-BR')} 🪙`}
-        </output>
-      </div>
-    </label>
-  );
-}
 
 // Extrai a expiração restante em horas de forma resiliente
 const getDiffHours = (sbc) => {
@@ -645,7 +444,6 @@ const getDiffHours = (sbc) => {
   return Infinity;
 };
 
-
 export default function SbcsPage({ onNavigate }) {
   const api = useApi();
   const [sbcs, setSbcs] = useState([]);
@@ -656,7 +454,7 @@ export default function SbcsPage({ onNavigate }) {
   const [scrapeStatus, setScrapeStatus] = useState(null);
   const pollTimer = useRef(null);
 
-  // Estados e efeitos para a nova Tela de Carregamento Interativa Cibernética 3D
+  // Estados e efeitos para a Tela de Carregamento Interativa Cibernética 3D
   const [moedasCount, setMoedasCount] = useState(0);
   const [skinIndex, setSkinIndex] = useState(0);
   const [activeTab, setActiveTab] = useState('telemetry');
@@ -664,7 +462,7 @@ export default function SbcsPage({ onNavigate }) {
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [gpuHeights, setGpuHeights] = useState(Array(18).fill(20));
 
-  // Efeito de oscilação do gráfico da GPU (Aba 2)
+  // Efeito de oscilação do gráfico da GPU
   useEffect(() => {
     if (activeTab === 'gpu') {
       const interval = setInterval(() => {
@@ -773,10 +571,6 @@ export default function SbcsPage({ onNavigate }) {
     return sbcs.map(s => {
       const name = (s.name || '').toLowerCase();
       
-      // 1. Identificar se entrega um jogador especial fixo
-      // SBCs de jogadores reais possuem player_card válido.
-      // DMEs que contêm termos como "pick", "escolha" ou "melhoria" de cartas no nome
-      // NÃO entregam um jogador especial fixo, mas sim uma ESCOLHA (Player Pick) ou Melhoria (Upgrade).
       const isPickOrPackName = name.includes('pick') || 
                                name.includes('escolha') || 
                                name.includes('1 de') || 
@@ -803,8 +597,6 @@ export default function SbcsPage({ onNavigate }) {
 
       const deliversFixedPlayer = s.player_card && !isPickOrPackName;
 
-      // 2. Classificação de Icons fixos (conforme decisão de design do usuário)
-      // Icons devem conter estritamente as cartas de Ícones/Heroes fixos.
       const isFixedIcon = deliversFixedPlayer && (
         name.includes('icon') || 
         name.includes('ícone') || 
@@ -818,7 +610,6 @@ export default function SbcsPage({ onNavigate }) {
         (s.player_card && (s.player_card.card_type || '').toLowerCase().includes('hero'))
       );
 
-      // 3. Determinar categoria final de acordo com a aba mapeada
       let category = 'Upgrades'; // Fallback padrão
       
       if (isFixedIcon) {
@@ -826,7 +617,6 @@ export default function SbcsPage({ onNavigate }) {
       } else if (deliversFixedPlayer) {
         category = 'Players';
       } else {
-        // Se não entrega jogador fixo, dividimos entre Upgrades e Challenges
         const isUpgrade = name.includes('upgrade') || 
                           name.includes('melhoria') || 
                           name.includes('melhorias') || 
@@ -848,7 +638,6 @@ export default function SbcsPage({ onNavigate }) {
         if (isUpgrade) {
           category = 'Upgrades';
         } else {
-          // Se for puzzle/desafio diário ou semanal que entrega pacotes
           const isChallenge = name.includes('desafio') || 
                               name.includes('challenge') || 
                               name.includes('combates marcantes') || 
@@ -861,13 +650,11 @@ export default function SbcsPage({ onNavigate }) {
           if (isChallenge) {
             category = 'Challenges';
           } else {
-            // Preservar categoria original ou aplicar fallback inteligente
             category = s.category && s.category.toLowerCase() === 'challenges' ? 'Challenges' : 'Upgrades';
           }
         }
       }
 
-      // Garantir primeira letra em maiúsculo ('Players', 'Upgrades', 'Challenges', 'Icons')
       const formattedCategory = category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
 
       return {
@@ -904,7 +691,7 @@ export default function SbcsPage({ onNavigate }) {
       result = result.filter(s => s.is_repeatable);
     }
 
-    // Filtro de Expiração Relativa (Consertado com fallback inteligente para expires_text do Futbin)
+    // Filtro de Expiração Relativa
     if (expirationDays !== 'Todos') {
       result = result.filter(s => {
         const diffHours = getDiffHours(s);
@@ -917,7 +704,6 @@ export default function SbcsPage({ onNavigate }) {
 
     // Ordenação
     result.sort((a, b) => {
-      // Deixar os SBCs diários por último
       const isDaily = (name) => {
         const lower = name.toLowerCase();
         return lower.includes('daily') || lower.includes('diário') || lower.includes('diario');
@@ -947,7 +733,6 @@ export default function SbcsPage({ onNavigate }) {
     const total = scrapeStatus?.progress?.total || 0;
     const percent = total > 0 ? (current / total) * 100 : 0;
     
-    // Extrai o nome do jogador em processamento para o scanner de rede
     let currentPlayerName = '';
     if (scrapeStatus?.message) {
       const match = scrapeStatus.message.match(/:\s*(.*)$/);
@@ -959,11 +744,10 @@ export default function SbcsPage({ onNavigate }) {
     }
 
     const SKINS = [
-      { name: 'Amber Orange', stroke: 'var(--accent)', glow: 'rgba(var(--accent-rgb), 0.65)', text: 'var(--accent)' },
-      { name: 'Cyber Green', stroke: '#00ff88', glow: 'rgba(0, 255, 136, 0.65)', text: '#00ff88' },
-      { name: 'Quantum Cyan', stroke: '#3399ff', glow: 'rgba(51, 153, 255, 0.65)', text: '#3399ff' },
-      { name: 'Icon Gold', stroke: '#ffd700', glow: 'rgba(255, 215, 0, 0.65)', text: '#ffd700' },
-      { name: 'Glitch Purple', stroke: '#cc00ff', glow: 'rgba(204, 0, 255, 0.65)', text: '#cc00ff' }
+      { name: 'Selo Ametista', stroke: 'var(--text-primary)', glow: 'rgba(79, 70, 229, 0.2)', text: 'var(--accent)' },
+      { name: 'Selo Terracota', stroke: 'var(--text-primary)', glow: 'rgba(180, 83, 9, 0.2)', text: '#b45309' },
+      { name: 'Selo Esmeralda', stroke: 'var(--text-primary)', glow: 'rgba(4, 120, 87, 0.2)', text: '#047857' },
+      { name: 'Selo Cobalto', stroke: 'var(--text-primary)', glow: 'rgba(3, 105, 161, 0.2)', text: '#0369a1' }
     ];
     const activeSkin = SKINS[skinIndex];
 
@@ -1015,7 +799,6 @@ export default function SbcsPage({ onNavigate }) {
 
     return (
       <div className="hologram-container fade-in">
-        {/* Auroras neon de background sutis */}
         <div style={{
           position: 'absolute',
           top: '30%',
@@ -1023,58 +806,56 @@ export default function SbcsPage({ onNavigate }) {
           transform: 'translate(-50%, -50%)',
           width: '300px',
           height: '300px',
-          background: 'radial-gradient(circle, rgba(var(--accent-rgb), 0.05) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(83, 83, 82, 0.03) 0%, transparent 70%)',
           pointerEvents: 'none',
           zIndex: 0
         }} />
         
-        {/* ──────── TÍTULO E STATUS DO PROCESSO ──────── */}
         <div style={{ textAlign: 'center', zIndex: 1, width: '100%', maxWidth: '480px', display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', marginBottom: 20 }}>
           <div>
             <h2 style={{ 
               fontSize: '1.7rem', 
               fontWeight: 800, 
-              color: '#ffffff', 
+              color: 'var(--text-primary)', 
               letterSpacing: '-0.02em',
-              fontFamily: 'var(--font-main)',
+              fontFamily: 'var(--font-serif)',
+              fontStyle: 'italic',
               marginBottom: 4
             }}>
-              {isScraping ? 'SINCRONIZAÇÃO EM ANDAMENTO' : 'CARREGANDO DMEs'}
+              {isScraping ? 'Sincronização em Andamento' : 'Carregando DMEs'}
             </h2>
             <p style={{ 
-              fontSize: '0.85rem', 
+              fontSize: '0.78rem', 
               color: 'var(--text-secondary)',
-              letterSpacing: '0.02em',
+              letterSpacing: '0.08em',
               textTransform: 'uppercase',
-              fontWeight: 600,
+              fontWeight: 700,
               opacity: 0.8
             }}>
               {isScraping 
-                ? 'Varrendo e decodificando novos desafios globais' 
+                ? 'Varrendo e estruturando novos desafios globais' 
                 : 'Estabelecendo conexões de alta performance'
               }
             </p>
           </div>
 
-          {/* Mini-Game de Cliques e Moedas */}
           <div style={{ 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center', 
             gap: 10, 
-            background: 'rgba(var(--accent-rgb), 0.04)', 
-            border: '1px solid rgba(var(--accent-rgb), 0.12)', 
-            borderRadius: 12, 
-            padding: '6px 14px', 
-            boxShadow: '0 0 15px rgba(var(--accent-rgb), 0.05)'
+            background: 'var(--bg-tertiary)', 
+            border: '1.5px solid var(--text-primary)', 
+            borderRadius: 'var(--radius-xs)', 
+            padding: '6px 14px',
+            boxShadow: '2px 2px 0px var(--text-secondary)'
           }}>
             <Coins size={16} style={{ color: 'var(--accent)', animation: 'spin 5s linear infinite' }} />
-            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>MOEDAS DE TREINO:</span>
-            <span style={{ fontFamily: "'Oswald', 'Teko', sans-serif", fontSize: '1.25rem', fontWeight: 700, color: 'var(--accent)' }}>{moedasCount}</span>
+            <span style={{ fontSize: '0.72rem', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--text-secondary)' }}>MOEDAS DE TREINO:</span>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{moedasCount}</span>
           </div>
         </div>
 
-        {/* ──────── CARD FIFA 3D INTERATIVO ──────── */}
         <div 
           className="cyborg-card-3d-wrapper"
           onMouseMove={handleMouseMove}
@@ -1092,24 +873,24 @@ export default function SbcsPage({ onNavigate }) {
               style={{ 
                 width: '100%', 
                 height: '100%', 
-                filter: `drop-shadow(0 0 16px ${activeSkin.glow})`,
+                filter: 'drop-shadow(3px 3px 0px rgba(83, 83, 82, 0.35))',
                 overflow: 'visible'
               }}
             >
               <path 
                 d="M 50,0 L 88,12 L 100,45 L 100,105 L 50,140 L 0,105 L 0,45 L 12,12 Z" 
-                fill="rgba(10, 10, 10, 0.9)" 
-                stroke={activeSkin.stroke} 
-                strokeWidth="3.5"
+                fill="var(--bg-tertiary)" 
+                stroke="var(--text-primary)" 
+                strokeWidth="1.8"
                 strokeLinejoin="round"
                 style={{ transition: 'stroke 0.3s ease' }}
               />
               <path 
                 d="M 12,15 L 88,15 M 50,0 L 50,15 M 50,15 L 50,120 M 15,103 L 85,103" 
                 fill="none" 
-                stroke={activeSkin.stroke} 
-                strokeWidth="1.5"
-                opacity="0.3"
+                stroke="var(--text-secondary)" 
+                strokeWidth="1.0"
+                opacity="0.4"
                 style={{ transition: 'stroke 0.3s ease' }}
               />
             </svg>
@@ -1131,7 +912,6 @@ export default function SbcsPage({ onNavigate }) {
             </div>
           </div>
           
-          {/* Faíscas sob cliques */}
           {sparks.map(s => (
             <span 
               key={s.id} 
@@ -1149,10 +929,7 @@ export default function SbcsPage({ onNavigate }) {
           ))}
         </div>
 
-        {/* ──────── CONTEÚDO DE TEXTO E STATUS ──────── */}
         <div style={{ textAlign: 'center', zIndex: 1, width: '100%', maxWidth: '480px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          
-          {/* Estatística de Progresso em Tamanho Gigante (Fonte Teko/Oswald) */}
           {isScraping && (
             <div style={{ 
               display: 'flex', 
@@ -1199,7 +976,6 @@ export default function SbcsPage({ onNavigate }) {
             </div>
           )}
 
-          {/* Barra de Progresso Neon */}
           <div style={{ 
             width: '100%', 
             height: '6px', 
@@ -1211,7 +987,6 @@ export default function SbcsPage({ onNavigate }) {
             boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.8)'
           }}>
             {isScraping ? (
-              // Barra de Progresso Real Reativa
               <motion.div 
                 initial={{ width: 0 }}
                 animate={{ width: `${percent}%` }}
@@ -1224,7 +999,6 @@ export default function SbcsPage({ onNavigate }) {
                 }}
               />
             ) : (
-              // Barra de Progresso Indeterminada Infinita
               <motion.div 
                 animate={{ 
                   x: ['-100%', '100%'] 
@@ -1246,7 +1020,6 @@ export default function SbcsPage({ onNavigate }) {
             )}
           </div>
 
-          {/* Painel Terminal Hacker de Logs e Telemetria com Abas */}
           <div style={{ width: '100%', marginTop: 8 }}>
             <div className="terminal-tabs">
               <button 
@@ -1271,7 +1044,7 @@ export default function SbcsPage({ onNavigate }) {
             <div className="terminal-content-box">
               {activeTab === 'telemetry' && (
                 <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: 4, marginBottom: 4 }}>
+                  <div style={{ display: 'flex', justifycontent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: 4, marginBottom: 4 }}>
                     <span style={{ color: 'var(--accent)', fontWeight: 600 }}>[CONEXÃO SEGURA]</span>
                     <span className="text-mono" style={{ opacity: 0.5 }}>STATUS: ACTIVE</span>
                   </div>
@@ -1319,11 +1092,11 @@ export default function SbcsPage({ onNavigate }) {
 
               {activeTab === 'gpu' && (
                 <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: 4, marginBottom: 4 }}>
+                  <div style={{ display: 'flex', justifycontent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: 4, marginBottom: 4 }}>
                     <span style={{ color: 'var(--accent)', fontWeight: 600 }}>[TELEMETRIA DE PROCESSAMENTO]</span>
                     <span className="text-mono" style={{ opacity: 0.5 }}>THREAD: LOCK_60FPS</span>
                   </div>
-                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifycontent: 'space-between', width: '100%' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, textAlign: 'left' }}>
                       <span style={{ fontSize: '0.68rem' }}>CPU LINEAR: <span style={{ color: 'var(--accent)' }}>{(35 + percent * 0.45).toFixed(1)}%</span></span>
                       <span style={{ fontSize: '0.68rem' }}>GPU RENDER: <span style={{ color: '#3399ff' }}>60 FPS estáveis</span></span>
@@ -1346,7 +1119,7 @@ export default function SbcsPage({ onNavigate }) {
 
               {activeTab === 'playstyles' && (
                 <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: 4, marginBottom: 4 }}>
+                  <div style={{ display: 'flex', justifycontent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: 4, marginBottom: 4 }}>
                     <span style={{ color: 'var(--accent)', fontWeight: 600 }}>[PLAYSTYLES INJETADOS]</span>
                     <span className="text-mono" style={{ opacity: 0.5 }}>DECODIFICADOR: OK</span>
                   </div>
@@ -1372,156 +1145,197 @@ export default function SbcsPage({ onNavigate }) {
               )}
             </div>
           </div>
-
         </div>
       </div>
     );
   }
 
-  // Variantes para animação Staggered (entrada em cascata de 60 FPS acelerada na GPU)
   const gridVariants = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.05
+        staggerChildren: 0.04
       }
     }
   };
 
   const cardVariants = {
-    hidden: { opacity: 0, y: 20, scale: 0.98 },
+    hidden: { opacity: 0, y: 15, scale: 0.99 },
     show: { 
       opacity: 1, 
       y: 0, 
       scale: 1,
       transition: {
         type: "spring",
-        stiffness: 110,
-        damping: 16
+        stiffness: 130,
+        damping: 18
       }
     }
   };
 
   return (
-    <div className="fade-in" style={{ padding: '0px 24px 24px 24px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="sbc-page-container fade-in">
       
-      {/* Painel Command Center de Filtros Premium */}
-      <div className="command-center-filters">
-        <div className="filters-row-primary">
-          
-          {/* Busca Futurista com Efeito Gooey Viscoso e Elástico */}
-          <GooeySearch 
-            value={searchTerm} 
-            onChange={setSearchTerm} 
-            placeholder="Buscar DMEs por nome..." 
-            suggestions={['Melhoria', '83+', 'Ícone', 'Elenco', 'Desafio', 'Campanha']}
-          />
-
-
-          {/* Chicletes de Categoria Neon */}
-          <div className="category-pills-container">
-            {['Todos', 'Players', 'Upgrades', 'Challenges', 'Icons'].map((cat) => (
-              <button
-                key={cat}
-                className={`category-pill ${categoryFilter === cat ? 'active' : ''}`}
-                onClick={() => setCategoryFilter(cat)}
-              >
-                {cat === 'Todos' ? 'Todos' : cat === 'Players' ? 'Jogadores' : cat === 'Upgrades' ? 'Melhorias' : cat === 'Challenges' ? 'Desafios' : cat}
-              </button>
-            ))}
+      {/* ── BARRA LATERAL DE FILTROS ULTRA-FINA (SIDEBAR) ── */}
+      <aside className="sbc-sidebar-filters">
+        <div className="sidebar-filters-inner">
+          <div className="sidebar-section-header">
+            <span className="sidebar-serif-title font-serif italic">Filtragem Analítica</span>
+            <span className="sidebar-mono-sub font-mono">SYS_CATALOG_v2.5</span>
           </div>
 
-          {/* Ordenação Premium */}
-          <PremiumDropdown 
-            value={sortOption}
-            onChange={setSortOption}
-            options={[
-              { value: 'cost_desc', label: 'Custo: Maior ➔ Menor' },
-              { value: 'cost_asc', label: 'Custo: Menor ➔ Maior' },
-              { value: 'exp_asc', label: 'Expiração Próxima' }
-            ]}
-          />
+          <div className="sidebar-divider" />
 
-        </div>
+          {/* Busca Gooey */}
+          <div className="sidebar-filter-item">
+            <span className="filter-label font-mono">BUSCA DE TERMO</span>
+            <GooeySearch 
+              value={searchTerm} 
+              onChange={setSearchTerm} 
+              placeholder="Buscar DMEs..." 
+              suggestions={['Melhoria', '83+', 'Ícone', 'Elenco', 'Desafio']}
+            />
+          </div>
 
-        {/* Segunda Linha: Filtros Avançados Inteligentes */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center', marginTop: 8 }}>
-          
-          {/* Slider de Custo Dinâmico Premium com Tooltip Flutuante 3D Isolado a 60 FPS */}
-          <CostSlider 
-            initialValue={maxCost} 
-            onChangeFinished={setMaxCost} 
-          />
+          <div className="sidebar-divider" />
 
-          {/* Filtros Rápidos de Expiração e Repetição */}
-          <div className="quick-toggle-container">
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.05em', marginRight: 4 }}>EXPIRAÇÃO</span>
-            
-            <button 
-              className={`quick-toggle-btn ${expirationDays === 'Todos' ? 'active' : ''}`}
-              onClick={() => setExpirationDays('Todos')}
-            >
-              Tudo
-            </button>
-            <button 
-              className={`quick-toggle-btn ${expirationDays === 1 ? 'active warning-color' : ''}`}
-              onClick={() => setExpirationDays(1)}
-            >
-              <Clock size={12} /> 24h
-            </button>
-            <button 
-              className={`quick-toggle-btn ${expirationDays === 3 ? 'active warning-color' : ''}`}
-              onClick={() => setExpirationDays(3)}
-            >
-              3 dias
-            </button>
-            <button 
-              className={`quick-toggle-btn ${expirationDays === 7 ? 'active' : ''}`}
-              onClick={() => setExpirationDays(7)}
-            >
-              7 dias
-            </button>
+          {/* Ordenação */}
+          <div className="sidebar-filter-item">
+            <span className="filter-label font-mono">ORDENAÇÃO</span>
+            <PremiumDropdown 
+              value={sortOption}
+              onChange={setSortOption}
+              options={[
+                { value: 'cost_desc', label: 'Custo: Maior ➔ Menor' },
+                { value: 'cost_asc', label: 'Custo: Menor ➔ Maior' },
+                { value: 'exp_asc', label: 'Expiração Próxima' }
+              ]}
+            />
+          </div>
 
-            <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.06)', margin: '0 8px' }} />
+          <div className="sidebar-divider" />
 
+          {/* Slider de Custo Máximo */}
+          <div className="sidebar-filter-item">
+            <CostSlider 
+              initialValue={maxCost} 
+              onChangeFinished={setMaxCost} 
+            />
+          </div>
+
+          <div className="sidebar-divider" />
+
+          {/* Filtros de Expiração */}
+          <div className="sidebar-filter-item">
+            <span className="filter-label font-mono">EXPIRAÇÃO EM DIAS</span>
+            <div className="sidebar-expire-buttons">
+              <button 
+                type="button"
+                className={`sidebar-expire-btn ${expirationDays === 'Todos' ? 'active' : ''}`}
+                onClick={() => setExpirationDays('Todos')}
+              >
+                Tudo
+              </button>
+              <button 
+                type="button"
+                className={`sidebar-expire-btn ${expirationDays === 1 ? 'active warning' : ''}`}
+                onClick={() => setExpirationDays(1)}
+              >
+                24h
+              </button>
+              <button 
+                type="button"
+                className={`sidebar-expire-btn ${expirationDays === 3 ? 'active warning' : ''}`}
+                onClick={() => setExpirationDays(3)}
+              >
+                3d
+              </button>
+              <button 
+                type="button"
+                className={`sidebar-expire-btn ${expirationDays === 7 ? 'active' : ''}`}
+                onClick={() => setExpirationDays(7)}
+              >
+                7d
+              </button>
+            </div>
+          </div>
+
+          <div className="sidebar-divider" />
+
+          {/* Repetíveis */}
+          <div className="sidebar-filter-item">
             <button 
-              className={`quick-toggle-btn accent-color ${repeatableOnly ? 'active' : ''}`}
+              type="button"
+              className={`sidebar-toggle-btn ${repeatableOnly ? 'active' : ''}`}
               onClick={() => setRepeatableOnly(!repeatableOnly)}
             >
-              <RotateCcw size={12} /> Apenas Repetíveis
+              <RotateCcw size={12} />
+              <span>APENAS REPETÍVEIS</span>
             </button>
           </div>
-
         </div>
-      </div>
+      </aside>
 
-      {filteredAndSortedSbcs.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: '48px 24px', borderColor: 'var(--border-accent)', marginTop: 24 }}>
-          <div style={{ fontSize: '3rem', marginBottom: 16 }}>🎯</div>
-          <div style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: 8 }}>Nenhum DME encontrado</div>
-          <div className="text-secondary" style={{ marginBottom: 24 }}>
-            Verifique seus filtros ou tente sincronizar manualmente.
-          </div>
-          <button className="btn btn-primary" onClick={triggerAutoScrape}>
-            🔄 Sincronizar Agora
-          </button>
-        </div>
-      ) : (
-        <motion.div 
-          className="sbc-grid"
-          variants={gridVariants}
-          initial="hidden"
-          animate="show"
-        >
-          {filteredAndSortedSbcs.map(sbc => (
-            <motion.div key={sbc.id} variants={cardVariants} layout>
-              <SbcCard sbc={sbc} api={api} onNavigate={onNavigate} />
-            </motion.div>
+      {/* ── FEED DE CONTEÚDO PRINCIPAL (DIREITO) ── */}
+      <main className="sbc-main-feed">
+        {/* Cabeçalho Editorial Dramático */}
+        <header className="sbc-editorial-header">
+          <div className="header-meta-series font-mono">[ OTIMIZADOR DE DESAFIOS ]</div>
+          <h1 className="header-editorial-title font-serif italic">
+            Desafios de Montagem de Elenco
+          </h1>
+          <p className="header-editorial-desc font-sans">
+            Catálogo estatístico de SBCs ativos estruturado sob a lógica de análise de portfólio.
+          </p>
+          <div className="header-border-line" />
+        </header>
+
+        {/* Abas Superiores de Categoria (Proporção Áurea) */}
+        <div className="category-tabs-container">
+          {['Todos', 'Players', 'Upgrades', 'Challenges', 'Icons'].map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              className={`category-tab-btn ${categoryFilter === cat ? 'active' : ''}`}
+              onClick={() => setCategoryFilter(cat)}
+            >
+              {cat === 'Todos' ? 'Todos DMEs' : cat === 'Players' ? 'Jogadores' : cat === 'Upgrades' ? 'Melhorias' : cat === 'Challenges' ? 'Desafios' : cat}
+            </button>
           ))}
-        </motion.div>
-      )}
+        </div>
+
+        {filteredAndSortedSbcs.length === 0 ? (
+          <div className="empty-state-portfolio">
+            <div className="empty-icon font-mono">Ø</div>
+            <h3 className="empty-title font-serif italic">Nenhum DME catalogado</h3>
+            <p className="empty-desc font-sans font-mono">FILTRO EXTREMO / SEM RESULTADOS ENCONTRADOS.</p>
+            <button type="button" className="btn-sync-action font-mono" onClick={triggerAutoScrape}>
+              🔄 SINC_BASE_DADOS
+            </button>
+          </div>
+        ) : (
+          <motion.div 
+            className="sbc-portfolio-layout"
+            variants={gridVariants}
+            initial="hidden"
+            animate="show"
+          >
+            {filteredAndSortedSbcs.map(sbc => {
+              return (
+                <motion.div 
+                  key={sbc.id} 
+                  variants={cardVariants} 
+                  layout
+                  className="portfolio-featured-item"
+                >
+                  <FeaturedSbcCard sbc={sbc} api={api} onNavigate={onNavigate} />
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        )}
+      </main>
     </div>
   );
 }
-

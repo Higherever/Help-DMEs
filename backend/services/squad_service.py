@@ -95,16 +95,69 @@ async def import_csv(session: AsyncSession, file_content: bytes) -> dict:
     # Limpar elenco anterior
     await session.execute(delete(UserSquadPlayer))
 
+    # Carregar mapeamento de posições PT -> EN para cruzamento robusto
+    from backend.models.models import PositionMapping, FCPlayer, PlayerCard
+    pos_mapping_res = await session.execute(select(PositionMapping))
+    pos_map = {row.pt.upper(): row.en.upper() for row in pos_mapping_res.scalars().all()}
+
     imported = 0
     skipped = 0
 
     for row in reader:
         try:
             price_min, price_max = _parse_price_limits(row.get("Price Limits", ""))
+            rating_val = _parse_int(row["Rating"])
+            pref_pos_pt = row["Preferred Position"].strip().upper()
+            pref_pos_en = pos_map.get(pref_pos_pt, pref_pos_pt)
+            cleaned_name = row["Name"].strip()
+
+            # Buscar playstyles no catálogo global (fc_players) ou player_cards (fallback)
+            playstyles_json = None
+
+            # 1. Tentar busca por nome exato e rating exato e posição compatível em fc_players
+            fc_q = select(FCPlayer.playstyles_json).where(
+                FCPlayer.overall == rating_val,
+                FCPlayer.position.ilike(f"%{pref_pos_en}%"),
+                func.lower(FCPlayer.name) == cleaned_name.lower()
+            )
+            fc_res = await session.execute(fc_q)
+            playstyles_json = fc_res.scalars().first()
+
+            # 2. Tentar busca em player_cards por nome exato e rating exato e posição compatível (fallback 1)
+            if not playstyles_json:
+                pc_q = select(PlayerCard.playstyles_json).where(
+                    PlayerCard.overall == rating_val,
+                    PlayerCard.position.ilike(f"%{pref_pos_en}%"),
+                    func.lower(PlayerCard.name) == cleaned_name.lower()
+                )
+                pc_res = await session.execute(pc_q)
+                playstyles_json = pc_res.scalars().first()
+
+            # 3. Tentar busca flexível (contendo nome) e posição compatível em fc_players (fallback 2)
+            if not playstyles_json:
+                fc_q_flex = select(FCPlayer.playstyles_json).where(
+                    FCPlayer.overall == rating_val,
+                    FCPlayer.position.ilike(f"%{pref_pos_en}%"),
+                    (FCPlayer.name.ilike(f"%{cleaned_name}%")) | 
+                    (func.lower(cleaned_name).like(func.concat('%', func.lower(FCPlayer.name), '%')))
+                )
+                fc_res_flex = await session.execute(fc_q_flex)
+                playstyles_json = fc_res_flex.scalars().first()
+
+            # 4. Fallback absoluto: Buscar apenas por Nome + Rating (ignorando posição, caso haja divergência de escalação no CSV)
+            if not playstyles_json:
+                fc_q_abs = select(FCPlayer.playstyles_json).where(
+                    FCPlayer.overall == rating_val,
+                    (func.lower(FCPlayer.name) == cleaned_name.lower()) |
+                    (FCPlayer.name.ilike(f"%{cleaned_name}%")) |
+                    (func.lower(cleaned_name).like(func.concat('%', func.lower(FCPlayer.name), '%')))
+                )
+                fc_res_abs = await session.execute(fc_q_abs)
+                playstyles_json = fc_res_abs.scalars().first()
 
             player = UserSquadPlayer(
-                name=row["Name"].strip(),
-                rating=_parse_int(row["Rating"]),
+                name=cleaned_name,
+                rating=rating_val,
                 rarity=row["Rarity"].strip(),
                 preferred_position=row["Preferred Position"].strip(),
                 nation=row["Nation"].strip(),
@@ -121,13 +174,15 @@ async def import_csv(session: AsyncSession, file_content: bytes) -> dict:
                 is_in_active_11=_parse_bool(row.get("IsInActive11", "false")),
                 alternate_positions=row.get("Alternate Positions", "").strip() or None,
                 external_price=_parse_external_price(row.get("ExternalPrice", "")),
+                playstyles_json=playstyles_json,
                 is_excluded=False,
                 imported_at=datetime.now(UTC),
             )
             session.add(player)
             imported += 1
 
-        except Exception:
+        except Exception as e:
+            logger.error(f"Erro ao importar jogador {row.get('Name')}: {e}")
             skipped += 1
             continue
 

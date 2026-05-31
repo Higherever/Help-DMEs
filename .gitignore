@@ -1,4 +1,6 @@
+# ===========================
 # Python
+# ===========================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -6,39 +8,122 @@ __pycache__/
 env/
 venv/
 .pytest_cache/
+*.egg-info/
+*.egg
 
+# ===========================
 # Node.js
+# ===========================
 node_modules/
 dist/
 dist-ssr/
 *.local
 
-# Database
+# ===========================
+# Databases (pesados, gerados localmente)
+# ===========================
 *.db
+*.db-shm
+*.db-wal
+*.sqlite
 *.sqlite3
+database/
 
-# OS
-.DS_Store
-Thumbs.db
-
+# ===========================
 # Logs
+# ===========================
 logs/
 *.log
 
-# Local/Graphify
-graphify-out/
-test_player_scrape.py
+# ===========================
+# Images / Assets pesados (gerados por scrapers)
+# ===========================
+images/
+frontend/public/images/
+frontend/public/logo.jpeg
+
+# ===========================
+# Debug HTMLs (arquivos de debug pesados)
+# ===========================
+debug_*.html
+sbc_detail.html
+sbc_list.html
+
+# ===========================
+# Arquivos de teste na raiz
+# ===========================
+test_*.py
+parse_debug*.py
+clean_mbappe.py
 update_futbin.py
 
-# Test files and dynamic images
+# ===========================
+# Testes do backend
+# ===========================
+backend/tests/
 backend/test.png
 backend/test_out.png
-images/sbcs/
-images/cards/
-scratch/
-*.html
-translation_cache.json
+
+# ===========================
+# Sandbox renderer (testes/output)
+# ===========================
+backend/sandbox_renderer/run_mbappe_test.py
+backend/sandbox_renderer/test_output/
+
+# ===========================
+# Backend scripts - testes/debug
+# ===========================
+backend/scripts/test_scraper_v2.py
 backend/scripts/scrape_all_state.json
 backend/scripts/scraper_state.json
+backend/scripts/maintain_players_db.log
+backend/scripts/scrape_all_players.log
+backend/scripts/scrape_v2.log
 
+# ===========================
+# Backend services - backups
+# ===========================
+backend/services/*.bak
 
+# ===========================
+# Translation cache (gerado em runtime)
+# ===========================
+backend/translation_cache.json
+
+# ===========================
+# Scratch (diretório de arquivos temporários)
+# ===========================
+scratch/
+
+# ===========================
+# Scripts da raiz (testes/utilidades de debug)
+# ===========================
+scripts/test_griezmann.py
+scripts/test_pillow_generator.py
+scripts/__pycache__/
+
+# ===========================
+# Scraper substats log na raiz
+# ===========================
+scraper_substats.log
+
+# ===========================
+# Graphify output (gerado por workflow)
+# ===========================
+graphify-out/
+
+# ===========================
+# Agent / IDE
+# ===========================
+.agent/
+
+# ===========================
+# JSON de dados pesados
+# ===========================
+database/playstyles_prata_bronze.json
+
+# ===========================
+# OS
+# ===========================
+.DS_Store
+Thumbs.db

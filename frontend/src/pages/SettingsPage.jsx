@@ -97,6 +97,19 @@ export default function SettingsPage() {
     }
   };
 
+  const startEaSync = async () => {
+    setIsSyncing(true);
+    try {
+      await api.post('/api/scrape/players/playstyles?pages=1-3', {});
+      const status = await api.get('/api/scrape/status');
+      setScrapeStatus(status);
+    } catch (e) {
+      alert('Erro ao iniciar sincronização de playstyles da EA');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex-center" style={{ height: '200px' }}>
@@ -145,15 +158,15 @@ export default function SettingsPage() {
                   style={{
                     width: '48px', height: '26px', borderRadius: '13px', cursor: 'pointer',
                     background: isTrue ? 'var(--accent)' : 'var(--bg-tertiary)',
-                    position: 'relative', transition: 'all 0.3s var(--ease-out)',
-                    border: '1px solid var(--border)'
+                    position: 'relative', transition: 'all 0.2s var(--ease-cinematic)',
+                    border: '1px solid var(--border)',
+                    boxShadow: isTrue ? '0 0 10px rgba(79, 70, 229, 0.25)' : 'none'
                   }}
                 >
                   <div style={{
-                    width: '20px', height: '20px', borderRadius: '50%', background: isTrue ? '#000' : '#fff',
+                    width: '20px', height: '20px', borderRadius: '50%', background: 'var(--text-primary)',
                     position: 'absolute', top: '2px', left: isTrue ? '24px' : '2px',
-                    transition: 'all 0.3s var(--ease-spring)',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                    transition: 'all 0.2s var(--ease-cinematic)'
                   }} />
                 </div>
               </div>
@@ -192,14 +205,24 @@ export default function SettingsPage() {
               Atualize a base de dados de SBCs e preços com as informações mais recentes.
             </p>
           </div>
-          <button 
-            className={`btn btn-primary ${isSyncing || scrapeStatus?.status === 'running' ? 'spinning' : ''}`}
-            onClick={startSync}
-            disabled={isSyncing || scrapeStatus?.status === 'running'}
-            style={{ minWidth: '160px', justifyContent: 'center' }}
-          >
-            {scrapeStatus?.status === 'running' ? '🔄 Sincronizando...' : '🚀 Sincronizar Agora'}
-          </button>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <button 
+              className={`btn btn-secondary ${isSyncing || scrapeStatus?.status === 'running' ? 'spinning' : ''}`}
+              onClick={startEaSync}
+              disabled={isSyncing || scrapeStatus?.status === 'running'}
+              style={{ minWidth: '190px', justifyContent: 'center', borderColor: 'var(--accent)', background: 'rgba(79, 70, 229, 0.04)', color: 'var(--text-primary)' }}
+            >
+              {scrapeStatus?.status === 'running' && scrapeStatus?.message?.includes('EA') ? '🔄 Sincronizando EA...' : '🎮 Playstyles EA (Prata/Bronze)'}
+            </button>
+            <button 
+              className={`btn btn-primary ${isSyncing || scrapeStatus?.status === 'running' ? 'spinning' : ''}`}
+              onClick={startSync}
+              disabled={isSyncing || scrapeStatus?.status === 'running'}
+              style={{ minWidth: '160px', justifyContent: 'center' }}
+            >
+              {scrapeStatus?.status === 'running' && !scrapeStatus?.message?.includes('EA') ? '🔄 Sincronizando...' : '🚀 Sincronizar Tudo'}
+            </button>
+          </div>
         </div>
 
         <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: '16px', display: 'flex', gap: '24px' }}>
@@ -231,26 +254,40 @@ export default function SettingsPage() {
       <section className="card">
         <h3 className="card-title">Histórico de Atividade</h3>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+          <table className="premium-table">
             <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
-                <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 500 }}>Data/Hora</th>
-                <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 500 }}>Fonte</th>
-                <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 500 }}>Status</th>
-                <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 500 }}>Resultado</th>
+              <tr>
+                <th>Data/Hora</th>
+                <th>Fonte</th>
+                <th>Status</th>
+                <th>Resultado</th>
               </tr>
             </thead>
             <tbody>
               {logs.length > 0 ? logs.map((log, i) => (
-                <tr key={i} style={{ borderBottom: i === logs.length - 1 ? 'none' : '1px solid var(--border-hover)' }}>
-                  <td className="text-mono" style={{ padding: '12px 8px' }}>{new Date(log.timestamp).toLocaleString('pt-BR')}</td>
-                  <td style={{ padding: '12px 8px' }}><span className="badge" style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)', padding: '2px 8px', borderRadius: '4px' }}>{log.source}</span></td>
-                  <td style={{ padding: '12px 8px' }}>
-                    <span style={{ color: getStatusColor(log.status), fontWeight: 500 }}>
-                      {log.status === 'completed' ? 'Sucesso' : log.status === 'failed' ? 'Erro' : log.status}
+                <tr key={i} className="table-row-hover">
+                  <td className="text-mono" style={{ padding: '12px 16px' }}>{new Date(log.timestamp).toLocaleString('pt-BR')}</td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <span className="badge-reason default">
+                      {log.source}
                     </span>
                   </td>
-                  <td className="text-secondary" style={{ padding: '12px 8px' }}>{log.message}</td>
+                  <td style={{ padding: '12px 16px' }}>
+                    {log.status === 'completed' ? (
+                      <span className="badge-reason untradeable" style={{ textTransform: 'none' }}>
+                        Sucesso
+                      </span>
+                    ) : log.status === 'failed' ? (
+                      <span className="badge-reason" style={{ color: 'var(--danger)', borderColor: 'rgba(223, 58, 58, 0.15)', background: 'rgba(223, 58, 58, 0.06)', textTransform: 'none' }}>
+                        Erro
+                      </span>
+                    ) : (
+                      <span className="badge-reason default" style={{ textTransform: 'none' }}>
+                        {log.status}
+                      </span>
+                    )}
+                  </td>
+                  <td className="text-secondary" style={{ padding: '12px 16px' }}>{log.message}</td>
                 </tr>
               )) : (
                 <tr>

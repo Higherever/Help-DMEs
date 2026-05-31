@@ -47,6 +47,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from backend.core.database import async_session_factory, DATABASE_FILE
 from backend.services.anti_bot import fetch_html, fetch_binary, create_session, reset_domain_state
 from backend.services.card_renderer import CardRendererClient
+from backend.services.asset_downloader import AssetDownloader
 
 logging.basicConfig(
     level=logging.INFO,
@@ -72,6 +73,16 @@ IMG_SEM    = asyncio.Semaphore(4)
 
 # Versão do scraper — para tracking de qualidade
 SCRAPER_VERSION = "v2.0"
+
+# Tipos de card BASE (Gold/Silver/Bronze) — usam foto retrato padrão do jogador.
+# Cards especiais (TOTY, POTM, UCL, etc.) usam render full-body da ocasião.
+# Adicione aqui qualquer novo tipo base que o Futbin venha a incluir.
+BASE_CARD_TYPES = {
+    "gold", "gold rare", "gold non-rare",
+    "silver", "silver rare", "silver non-rare",
+    "bronze", "bronze rare", "bronze non-rare",
+}
+
 
 
 # ── State management ──────────────────────────────────────────────────────────
@@ -296,11 +307,23 @@ def _parse_player_row(row, page: int) -> Optional[Dict]:
     player_url = f"{FUTBIN_BASE}{href}" if href and not href.startswith("http") else href
     
     # ── Face/Render do jogador (pequeno, da listagem) ──
-    face_el = (
-        row.select_one("img.playercard-26-special-img") or
-        row.select_one("img[src*='/players/p']") or
-        row.select_one(".playercard-s-26-img-column img")
-    )
+    # Cards base (Gold/Silver/Bronze) usam foto retrato padrão.
+    # Cards especiais (TOTY, POTM, UCL etc.) usam render full-body.
+    is_base_card = version.lower() in BASE_CARD_TYPES
+    if is_base_card:
+        # Para cards base: prefer o elemento de foto padrão do jogador
+        face_el = (
+            row.select_one("img[src*='/players/p']") or
+            row.select_one(".playercard-s-26-img-column img") or
+            row.select_one("img.playercard-26-special-img")
+        )
+    else:
+        # Para cards especiais: prefer o render full-body
+        face_el = (
+            row.select_one("img.playercard-26-special-img") or
+            row.select_one("img[src*='/players/p']") or
+            row.select_one(".playercard-s-26-img-column img")
+        )
     face_url = ""
     ea_item_id = ""
     if face_el:
@@ -341,6 +364,7 @@ async def scrape_futbin_player_detail(
     session: aiohttp.ClientSession,
     player_url: str,
     futbin_id: str,
+    card_type: str = "",
 ) -> Dict:
     """
     Raspa a página de detalhe de um jogador no Futbin.
@@ -362,16 +386,56 @@ async def scrape_futbin_player_detail(
     
     # ── BG do card e Face do jogador ─────────────────────────────────────────
     try:
-        bg_img = soup.select_one("img.playercard-s-26-bg")
+        bg_img = soup.select_one("img.playercard-26-bg")
         if bg_img:
-            bg_src = bg_img.get("src", "")
-            # Preservar assinatura para evitar sig_invalid
-            data["bg_url_hd"] = bg_src
+            # Pegar a URL de alta resolução no srcset se existir (ex: w=504) mantendo assinatura
+            srcset = bg_img.get("srcset", "")
+            if srcset:
+                urls = [u.strip().split(" ")[0] for u in srcset.split(",")]
+                data["bg_url_hd"] = urls[-1] # Pega a última que geralmente é a 2x (w=504)
+            else:
+                data["bg_url_hd"] = bg_img.get("src", "")
         
-        face_img = soup.select_one("img.playercard-26-special-img")
+        # Extrair face/render por tipo de card:
+        # - Cards base (Gold/Silver/Bronze): usar foto retrato padrão (img[src*='/players/p'])
+        # - Cards especiais: usar render full-body (img.playercard-26-special-img)
+        card_type_lower = (card_type or "").lower()
+        is_base = card_type_lower in BASE_CARD_TYPES
+
+        if is_base:
+            # Foto padrão do jogador (retrato)
+            face_img = (
+                soup.select_one("img[src*='/players/p']") or
+                soup.select_one("img.playercard-26-special-img")
+            )
+            # Para cards BASE: capturar portrait (ID numérico puro, sem prefixo 'p')
+            # O portrait padrão tem URL /players/231747.png (sem 'p')
+            # O render especial tem URL /players/p117672259.png (com 'p')
+            portrait_img = (
+                soup.select_one("img[src*='/players/']:not([src*='/players/p'])") or
+                soup.select_one("img[src*='/img/players/'][src!*='/players/p']")
+            )
+            if portrait_img:
+                portrait_src = (
+                    portrait_img.get("data-original") or
+                    portrait_img.get("data-src") or
+                    portrait_img.get("src") or ""
+                )
+                if portrait_src and "/players/" in portrait_src:
+                    data["portrait_url"] = portrait_src
+                    # Extrair o resource_id do portrait (ex: 231747)
+                    m_portrait = re.search(r'/players/(\d+)\.png', portrait_src)
+                    if m_portrait:
+                        data["portrait_resource_id"] = m_portrait.group(1)
+        else:
+            # Render full-body do card especial
+            face_img = (
+                soup.select_one("img.playercard-26-special-img") or
+                soup.select_one("img[src*='/players/p']")
+            )
+
         if face_img:
             face_src = face_img.get("src", "")
-            # Preservar assinatura para evitar sig_invalid
             data["render_url"] = face_src
     
     except Exception as e:
@@ -633,76 +697,8 @@ async def save_player_images(
     player_data: Dict,
     futbin_id: str,
 ) -> Dict:
-    """
-    Baixa e salva todas as imagens do jogador localmente.
-    Retorna dict com caminhos locais.
-    """
-    image_paths = {}
-    name_slug = sanitize(player_data.get("name", "unknown"))
-    
-    # ── Card completo HD (do FutGG) ──
-    card_url = (
-        player_data.get("futgg_card_image_url") or
-        player_data.get("bg_url_hd") or
-        player_data.get("bg_url_raw")
-    )
-    if card_url:
-        card_filename = f"fc_player_{futbin_id}_{name_slug}.png"
-        card_path = IMAGES_DIR / "cards" / "full" / card_filename
-        success = await download_image(session, card_url, card_path)
-        if success:
-            image_paths["card_template_url"] = f"/images/cards/full/{card_filename}"
-            
-            # Criar miniatura 150px
-            try:
-                _create_thumbnail(str(card_path), str(IMAGES_DIR / "cards" / "small" / card_filename))
-            except Exception as e:
-                logger.debug(f"Erro ao criar miniatura: {e}")
-    
-    # ── Render/Foto do jogador ──
-    render_url = (
-        player_data.get("futgg_render_url") or
-        player_data.get("render_url") or
-        player_data.get("face_url_raw")
-    )
-    if render_url:
-        render_filename = f"render_{futbin_id}_{name_slug}.png"
-        render_path = IMAGES_DIR / "cards" / "renders" / render_filename
-        success = await download_image(session, render_url, render_path)
-        if success:
-            image_paths["render_url"] = f"/images/cards/renders/{render_filename}"
-    
-    # ── Bandeira da nação ──
-    nation_url = player_data.get("nation_flag_url")
-    if nation_url:
-        nation_slug = sanitize(player_data.get("nation", "unknown"))
-        nation_filename = f"nation_{nation_slug}.png"
-        nation_path = IMAGES_DIR / "cards" / "nations" / nation_filename
-        success = await download_image(session, nation_url, nation_path)
-        if success:
-            image_paths["nation_flag_url"] = f"/images/cards/nations/{nation_filename}"
-    
-    # ── Logo do clube ──
-    club_url = player_data.get("club_logo_url")
-    if club_url:
-        club_slug = sanitize(player_data.get("club", "unknown"))
-        club_filename = f"club_{club_slug}.png"
-        club_path = IMAGES_DIR / "cards" / "clubs" / club_filename
-        success = await download_image(session, club_url, club_path)
-        if success:
-            image_paths["club_logo_url"] = f"/images/cards/clubs/{club_filename}"
-    
-    # ── Logo da liga ──
-    league_url = player_data.get("league_logo_url")
-    if league_url:
-        league_slug = sanitize(player_data.get("league", "unknown"))
-        league_filename = f"league_{league_slug}.png"
-        league_path = IMAGES_DIR / "cards" / "leagues" / league_filename
-        success = await download_image(session, league_url, league_path)
-        if success:
-            image_paths["league_logo_url"] = f"/images/cards/leagues/{league_filename}"
-    
-    return image_paths
+    """Delegar a higienização semântica e os downloads ao novo AssetDownloader modular."""
+    return await AssetDownloader.enrich_and_download_player_assets(session, player_data, futbin_id, IMG_SEM)
 
 
 def _create_thumbnail(input_path: str, output_path: str):
@@ -767,9 +763,10 @@ async def upsert_player(session, player_data: Dict):
         "league":           player_data.get("league"),
         "card_type":        player_data.get("card_type"),
         "face_url":         player_data.get("face_url_raw"),
-        "bg_url_raw":       player_data.get("bg_url_raw"),
+        "bg_url_raw":       player_data.get("bg_url_hd") or player_data.get("bg_url_raw"),
         "card_template_url": player_data.get("card_template_url"),
         "render_url":       player_data.get("render_url"),
+        "portrait_url":     player_data.get("portrait_url"),
         "bg_url_hd":        player_data.get("card_template_url") or player_data.get("bg_url_hd") or player_data.get("futgg_card_image_url"),
         "nation_flag_url":  player_data.get("nation_flag_url"),
         "club_logo_url":    player_data.get("club_logo_url"),
@@ -881,7 +878,7 @@ async def process_player(
     
     # Executar Fase 2 (Futbin detalhe) e Fase 3 (FutGG) em paralelo
     tasks = [
-        scrape_futbin_player_detail(session_futbin, player_url, futbin_id),
+        scrape_futbin_player_detail(session_futbin, player_url, futbin_id, card_type=player_basic.get("card_type", "")),
         scrape_futgg_card_image(session_futgg, name, overall, futbin_id, ea_item_id),
     ]
     

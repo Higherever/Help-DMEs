@@ -234,8 +234,10 @@ async def migrate_fc_players_schema():
         ("accelerate_type", "TEXT"),
         # IDs cruzados
         ("futgg_player_id", "TEXT"),
+        ("ea_id",           "TEXT"),
         # URLs extras
         ("render_url",      "TEXT"),
+        ("portrait_url",    "TEXT"),
         ("bg_url_hd",       "TEXT"),
         ("nation_flag_url", "TEXT"),
         ("club_logo_url",   "TEXT"),

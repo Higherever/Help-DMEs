@@ -918,16 +918,18 @@ async def scrape_futbin_player_detail(
     # 6. Playstyles e Playstyles+ (FC 26)
     try:
         playstyles = []
-        for anchor in soup.select("a[href*='/playstyles/']"):
-            classes = anchor.get("class", [])
-            if "active" in classes:
-                name_el = anchor.select_one(".slim-font, div")
-                if name_el:
-                    ps_name = name_el.get_text(strip=True)
-                    is_plus = "psplus" in classes
-                    img_el = anchor.select_one("img")
-                    icon = img_el.get("src", "") if img_el else ""
-                    playstyles.append({"name": ps_name, "is_plus": is_plus, "icon_url": icon})
+        active_wrapper = soup.select_one(".player-abilities-wrapper:not(.hidden)")
+        if active_wrapper:
+            for anchor in active_wrapper.select("a[href*='/playstyles/']"):
+                classes = anchor.get("class", [])
+                if "active" in classes:
+                    name_el = anchor.select_one(".slim-font, div")
+                    if name_el:
+                        ps_name = name_el.get_text(strip=True)
+                        is_plus = "psplus" in classes
+                        img_el = anchor.select_one("img")
+                        icon = img_el.get("src", "") if img_el else ""
+                        playstyles.append({"name": ps_name, "is_plus": is_plus, "icon_url": icon})
         if playstyles:
             data["playstyles_json"] = json.dumps(playstyles, ensure_ascii=False)
     except Exception:

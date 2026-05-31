@@ -11,25 +11,30 @@ import SbcsPage from './pages/SbcsPage';
 import SettingsPage from './pages/SettingsPage';
 import CalculatorPage from './pages/CalculatorPage';
 import { useApi } from './hooks/useApi';
-import InteractiveBackground from './components/Layout/InteractiveBackground';
+import ShadowOverlay from './components/Layout/ShadowOverlay';
+import TransitionGrid from './components/Layout/TransitionGrid';
+import ThreeDCard from './components/Dashboard/ThreeDCard';
 
 export default function App() {
   const api = useApi();
   const [showLanding, setShowLanding] = useState(true);
-  const [activePage, setActivePage] = useState('dashboard');
+  const [activePage, setActivePage] = useState('sbcs');
   const [squadStats, setSquadStats] = useState(null);
   const [scrapeStatus, setScrapeStatus] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [squadPlayers, setSquadPlayers] = useState([]);
 
   // Carregar dados iniciais ao entrar no app
   const loadInitialData = async () => {
     try {
-      const [statsData, scrapeData] = await Promise.all([
+      const [statsData, scrapeData, squadData] = await Promise.all([
         api.get('/api/squad/stats'),
         api.get('/api/scrape/status'),
+        api.get('/api/squad'),
       ]);
       setSquadStats(statsData);
       setScrapeStatus(scrapeData);
+      setSquadPlayers(squadData || []);
     } catch (e) {
       console.error('Erro ao carregar dados:', e);
     }
@@ -116,7 +121,18 @@ export default function App() {
 
   return (
     <>
-      <InteractiveBackground />
+      <ShadowOverlay
+        animation={{ scale: 50, speed: 50 }}
+        noise={{ opacity: 0.4, scale: 1 }}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 0,
+          pointerEvents: 'none',
+        }}
+      />
+      {!showLanding && <ThreeDCard squadPlayers={squadPlayers} />}
+      <TransitionGrid pageKey={activePage} />
       <Toaster 
         position="top-right" 
         toastOptions={{ 
@@ -127,20 +143,53 @@ export default function App() {
           } 
         }} 
       />
-      {showLanding ? (
-        <LandingPage onStart={handleStart} />
-      ) : (
-        <Layout
-          activePage={activePage}
-          onNavigate={setActivePage}
-          title={PAGE_TITLES[activePage] || 'Dashboard'}
-          onRefresh={handleRefresh}
-          isRefreshing={isRefreshing}
+      <AnimatePresence>
+        {showLanding && (
+          <motion.div
+            key="landing"
+            initial={{ opacity: 1 }}
+            exit={{ 
+              opacity: 0, 
+              scale: 1.08, 
+              filter: 'blur(15px)',
+              transition: { duration: 0.9, ease: [0.16, 1, 0.3, 1] } 
+            }}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              zIndex: 9999,
+              background: '#000000',
+              overflow: 'hidden'
+            }}
+          >
+            <LandingPage onStart={handleStart} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {!showLanding && (
+        <motion.div
+          key="app-main"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.7, ease: 'easeOut', delay: 0.1 }}
+          style={{ width: '100%', height: '100%' }}
         >
-          <AnimatePresence mode="wait">
-            {renderPage()}
-          </AnimatePresence>
-        </Layout>
+          <Layout
+            activePage={activePage}
+            onNavigate={setActivePage}
+            title={PAGE_TITLES[activePage] || 'Dashboard'}
+            onRefresh={handleRefresh}
+            isRefreshing={isRefreshing}
+          >
+            <AnimatePresence mode="wait">
+              {renderPage()}
+            </AnimatePresence>
+          </Layout>
+        </motion.div>
       )}
     </>
   );
