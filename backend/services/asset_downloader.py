@@ -1,3 +1,4 @@
+import asyncio
 import os
 import re
 import sys
@@ -202,8 +203,8 @@ class AssetDownloader:
                 
                 # Gerar miniatura
                 try:
-                    from backend.scripts.scrape_players_v2 import _create_thumbnail
-                    _create_thumbnail(str(dest), str(IMAGES_DIR / "cards" / "small" / filename))
+                    from backend.scripts.scrape_master import create_premium_thumbnail
+                    create_premium_thumbnail(str(dest), str(IMAGES_DIR / "cards" / "small" / filename))
                     res_paths["card_small_url"] = f"/images/cards/small/{filename}"
                 except Exception:
                     pass

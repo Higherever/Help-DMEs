@@ -824,28 +824,48 @@ async def scrape_futbin_player_detail(
         
     # 3. Sub-atributos detalhados (ex: Finalização, Fôlego, Visão)
     try:
+        # Mapa expandido com TODOS os rótulos conhecidos do Futbin (atuais e legados)
         sub_map = {
-            "Acceleration": "acceleration", "Sprint Speed": "sprint_speed",
-            "Finishing": "finishing", "Shot Power": "shot_power",
-            "Long Shots": "long_shots", "Volleys": "volleys",
-            "Positioning": "positioning_att", "Penalties": "penalties",
-            "Short Passing": "short_passing", "Long Passing": "long_passing",
+            # Ritmo (PAC)
+            "Acceleration": "acceleration", "Accel": "acceleration",
+            "Sprint Speed": "sprint_speed", "Sprint Spd": "sprint_speed",
+            # Finalização (SHO)
+            "Finishing": "finishing", "Shot Power": "shot_power", "Shot Pwr": "shot_power",
+            "Long Shots": "long_shots", "Long Shot": "long_shots",
+            "Volleys": "volleys",
+            "Positioning": "positioning_att", "Att. Position": "positioning_att",
+            "Att Position": "positioning_att", "Att.Position": "positioning_att",
+            "Penalties": "penalties", "Penalty": "penalties",
+            # Passe (PAS)
+            "Short Passing": "short_passing", "Short Pass": "short_passing",
+            "Long Passing": "long_passing", "Long Pass": "long_passing",
             "Crossing": "crossing", "Curve": "curve",
             "FK Accuracy": "free_kick", "Free Kick Accuracy": "free_kick",
+            "FK Acc.": "free_kick", "FK Acc": "free_kick", "Free Kick": "free_kick",
             "Vision": "vision",
+            # Drible (DRI)
             "Agility": "agility", "Balance": "balance",
-            "Reactions": "reactions", "Ball Control": "ball_control",
+            "Reactions": "reactions", "Ball Control": "ball_control", "Ball Ctrl": "ball_control",
             "Composure": "composure", "Dribbling": "skill_dribbling",
-            "Interceptions": "interceptions", "Heading Accuracy": "heading",
-            "Heading": "heading", "Def Awareness": "marking",
-            "Defensive Awareness": "marking", "Marking": "marking",
-            "Standing Tackle": "standing_tackle", "Sliding Tackle": "sliding_tackle",
+            # Defesa (DEF)
+            "Interceptions": "interceptions",
+            "Heading Accuracy": "heading", "Heading Acc.": "heading",
+            "Heading Acc": "heading", "Heading": "heading", "Head. Acc.": "heading",
+            "Def Awareness": "marking", "Def. Awareness": "marking",
+            "Defensive Awareness": "marking", "Marking": "marking", "Def Aware": "marking",
+            "Standing Tackle": "standing_tackle", "Stand Tackle": "standing_tackle",
+            "Stand. Tackle": "standing_tackle",
+            "Sliding Tackle": "sliding_tackle", "Slide Tackle": "sliding_tackle",
+            "Slide. Tackle": "sliding_tackle",
+            # Físico (PHY)
             "Jumping": "jumping", "Stamina": "stamina",
             "Strength": "strength", "Aggression": "aggression",
+            # Goleiro
             "GK Diving": "gk_diving", "GK Handling": "gk_handling",
             "GK Kicking": "gk_kicking", "GK Positioning": "gk_positioning",
             "GK Reflexes": "gk_reflexes",
         }
+        # Seletores primários
         for stat_row in soup.select(".player-stat-row"):
             name_el = stat_row.select_one(".player-stat-name")
             val_el = stat_row.select_one(".player-stat-value")
@@ -856,6 +876,17 @@ async def scrape_futbin_player_detail(
                     val = safe_int(val_el.get_text(strip=True))
                     if val and 1 <= val <= 99:
                         data[col] = val
+        # Fallback: seletores alternativos
+        if not data.get("short_passing"):
+            for row_el in soup.select("tr, .stat-row, .sub-stat-row, div[class*='stat']"):
+                cells = row_el.find_all(["td", "span", "div"])
+                if len(cells) >= 2:
+                    label_text = cells[0].get_text(strip=True)
+                    col = sub_map.get(label_text)
+                    if col and col not in data:
+                        val = safe_int(cells[-1].get_text(strip=True))
+                        if val and 1 <= val <= 99:
+                            data[col] = val
     except Exception:
         pass
         
@@ -863,15 +894,24 @@ async def scrape_futbin_player_detail(
     try:
         profile_map = {
             "Weak Foot": "weak_foot",
+            "WF": "weak_foot",
             "Skill Moves": "skill_moves",
+            "Skills": "skill_moves",
+            "SM": "skill_moves",
             "Foot": "foot",
+            "Preferred Foot": "foot",
             "Height": "height",
             "Age": "age",
             "Weight": "weight",
             "Work Rates": "workrates",
             "Work Rate": "workrates",
+            "WR": "workrates",
             "AcceleRATE": "accelerate_type",
             "Accelerate": "accelerate_type",
+            "AccelType": "accelerate_type",
+            "Alt Pos": "alt_positions",
+            "Alt. Pos": "alt_positions",
+            "Alternative Positions": "alt_positions",
         }
         for profile_div in soup.select(".align-center, .xs-font"):
             label_el = profile_div.select_one(".text-faded")

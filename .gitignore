@@ -127,3 +127,4 @@ database/playstyles_prata_bronze.json
 # ===========================
 .DS_Store
 Thumbs.db
+backend/scripts/scrape_master_state.json

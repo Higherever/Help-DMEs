@@ -29,7 +29,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from backend.core.database import get_session, init_db
 from backend.models.models import PlayerCard
 from backend.services.scraping_utils import sanitize_filename_part
-from backend.scripts.scrape_players_v2 import scrape_futgg_card_image, download_image, _create_thumbnail
+from backend.scripts.scrape_master import scrape_futgg_card_image, download_binary_file, create_premium_thumbnail
 from backend.services.image_processor import remove_white_background_inplace
 
 # Configuração de logging
@@ -87,8 +87,6 @@ async def process_sbc_card(session: aiohttp.ClientSession, pc: PlayerCard, db) -
         futgg_data = await scrape_futgg_card_image(
             session=session,
             player_name=pc.name,
-            overall=pc.overall,
-            futbin_id=futbin_id,
             ea_item_id=ea_item_id
         )
     except Exception as e:
@@ -113,7 +111,7 @@ async def process_sbc_card(session: aiohttp.ClientSession, pc: PlayerCard, db) -
     
     # 5. Fazer download físico do card HD completo para a pasta full
     logger.info(f"Baixando card HD para: {full_path}")
-    download_success = await download_image(session, hd_url, full_path)
+    download_success = await download_binary_file(session, hd_url, full_path)
     if not download_success:
         logger.error(f"Falha ao realizar o download do card HD para {pc.name} da URL {hd_url}")
         return False
@@ -130,7 +128,7 @@ async def process_sbc_card(session: aiohttp.ClientSession, pc: PlayerCard, db) -
     # 6. Gerar a miniatura cropada de 150x169px (Small Card) usando Pillow
     logger.info(f"Gerando miniatura cropada transparente de 150x169px em: {small_path}")
     try:
-        _create_thumbnail(str(full_path), str(small_path))
+        create_premium_thumbnail(str(full_path), str(small_path))
         logger.info(f"Miniatura gerada com sucesso!")
     except Exception as e:
         logger.error(f"Falha ao gerar a miniatura cropada para {pc.name}: {e}")

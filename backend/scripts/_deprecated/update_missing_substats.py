@@ -61,16 +61,23 @@ async def download_image(http, url: str, local_rel_path: str) -> bool:
 
 async def update_missing_stats():
     async with async_session_factory() as db:
-        # Busca apenas jogadores das duas tabelas que não têm aceleração (como proxy de sub-atributos ausentes)
+        # Busca jogadores que ainda têm campos críticos faltando
+        # Inclui: sub-atributos ausentes, skill_moves, weight, alt_positions, etc.
         # Primeiro, FC_PLAYERS (Base de jogadores completa)
         result_fc = await db.execute(text("""
             SELECT id, futbin_id, name, face_url, nation_flag_url, club_logo_url, league_logo_url 
             FROM fc_players 
             WHERE futbin_id IS NOT NULL AND futbin_id NOT LIKE 'ea-%'
-            AND (substats_source IS NULL OR substats_source != 'futbin')
             AND (
                 acceleration IS NULL 
-                OR card_type NOT IN ('Gold Rare', 'Gold Non Rare', 'Silver Rare', 'Silver Non Rare', 'Bronze Rare', 'Bronze Non Rare', 'Gold', 'Silver', 'Bronze')
+                OR skill_moves IS NULL
+                OR short_passing IS NULL
+                OR marking IS NULL
+                OR standing_tackle IS NULL
+                OR heading IS NULL
+                OR free_kick IS NULL
+                OR weight IS NULL
+                OR alt_positions IS NULL
                 OR face_url IS NULL 
                 OR face_url NOT LIKE '/images/%'
             )
@@ -154,8 +161,10 @@ async def update_missing_stats():
                     success = await download_image(http, futbin_league, local_league)
                     data["league_logo_url"] = local_league if success else item["league_logo_url"]
 
-                # Preparar colunas que vieram do Futbin para UPDATE apenas dos que são NULL
+                # Preparar colunas que vieram do Futbin para UPDATE
+                # Inclui sub-atributos, perfil biográfico e emblemas
                 fields_to_update = [
+                    # Sub-atributos
                     "acceleration", "sprint_speed", "finishing", "shot_power",
                     "long_shots", "volleys", "positioning_att",
                     "short_passing", "long_passing", "crossing", "curve",
@@ -165,6 +174,10 @@ async def update_missing_stats():
                     "standing_tackle", "sliding_tackle",
                     "jumping", "stamina", "strength", "aggression", "penalties",
                     "gk_diving", "gk_handling", "gk_kicking", "gk_positioning", "gk_reflexes",
+                    # Perfil biográfico
+                    "skill_moves", "weak_foot", "foot", "height", "weight", "age",
+                    "alt_positions", "accelerate_type", "workrates",
+                    # Imagens
                     "face_url", "club_logo_url", "nation_flag_url", "league_logo_url"
                 ]
 

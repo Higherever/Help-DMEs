@@ -728,42 +728,124 @@ async def _fetch_and_parse_player(session: aiohttp.ClientSession, url: str) -> d
                 
         data['playstyles'] = playstyles
         
-        # 4. Workrates, SM, WF
-        # Example format: <div>Skills</div> <div>4</div>
-        skills_div = soup.find(string="Skills")
-        if skills_div and skills_div.parent and skills_div.parent.find_next_sibling():
-            data['skill_moves'] = skills_div.parent.find_next_sibling().get_text(strip=True)
+        # 4. Workrates, SM, WF, Alt Pos
+        # O Futbin pode usar vários rótulos diferentes: "Skills", "Skill Moves", "SM"
+        for sm_label in ["Skills", "Skill Moves", "SM"]:
+            skills_div = soup.find(string=sm_label)
+            if skills_div and skills_div.parent and skills_div.parent.find_next_sibling():
+                sm_text = skills_div.parent.find_next_sibling().get_text(strip=True)
+                sm_val = re.sub(r'[^\d]', '', sm_text)
+                if sm_val:
+                    data['skill_moves'] = int(sm_val)
+                    break
             
-        wf_div = soup.find(string="Weak Foot")
-        if wf_div and wf_div.parent and wf_div.parent.find_next_sibling():
-            data['weak_foot'] = wf_div.parent.find_next_sibling().get_text(strip=True)
+        for wf_label in ["Weak Foot", "WF"]:
+            wf_div = soup.find(string=wf_label)
+            if wf_div and wf_div.parent and wf_div.parent.find_next_sibling():
+                wf_text = wf_div.parent.find_next_sibling().get_text(strip=True)
+                wf_val = re.sub(r'[^\d]', '', wf_text)
+                if wf_val:
+                    data['weak_foot'] = int(wf_val)
+                    break
             
-        wr_div = soup.find(string="Work Rate")
-        if wr_div and wr_div.parent and wr_div.parent.find_next_sibling():
-            data['workrates'] = wr_div.parent.find_next_sibling().get_text(strip=True)
-        pos_div = soup.find(string="Alt Pos")
-        if pos_div and pos_div.parent and pos_div.parent.find_next_sibling():
-            data['alt_positions'] = pos_div.parent.find_next_sibling().get_text(strip=True)
+        for wr_label in ["Work Rate", "Work Rates", "WR"]:
+            wr_div = soup.find(string=wr_label)
+            if wr_div and wr_div.parent and wr_div.parent.find_next_sibling():
+                data['workrates'] = wr_div.parent.find_next_sibling().get_text(strip=True)
+                break
 
-        # 5. Extração direta de 30 Sub-atributos (Blindando contra a SoFIFA)
+        alt_div = soup.find('div', class_='playercard-26-alt-pos')
+        if alt_div:
+            data['alt_positions'] = ', '.join(alt_div.stripped_strings)
+        else:
+            for ap_label in ["Alt Pos", "Alt. Pos", "Alternative Positions"]:
+                pos_div = soup.find(string=ap_label)
+                if pos_div and pos_div.parent and pos_div.parent.find_next_sibling():
+                    data['alt_positions'] = pos_div.parent.find_next_sibling().get_text(strip=True)
+                    break
+
+        for foot_label in ["Foot", "Preferred Foot"]:
+            foot_div = soup.find(string=foot_label)
+            if foot_div and foot_div.parent and foot_div.parent.find_next_sibling():
+                data['foot'] = foot_div.parent.find_next_sibling().get_text(strip=True)
+                break
+
+        for h_label in ["Height"]:
+            h_div = soup.find(string=h_label)
+            if h_div and h_div.parent and h_div.parent.find_next_sibling():
+                h_text = h_div.parent.find_next_sibling().get_text(strip=True)
+                cm_m = re.search(r'(\d+)\s*cm', h_text, re.I)
+                if cm_m:
+                    data['height'] = int(cm_m.group(1))
+                break
+
+        for w_label in ["Weight"]:
+            w_div = soup.find(string=w_label)
+            if w_div and w_div.parent and w_div.parent.find_next_sibling():
+                w_text = w_div.parent.find_next_sibling().get_text(strip=True)
+                kg_m = re.search(r'(\d+)\s*kg', w_text, re.I)
+                if kg_m:
+                    data['weight'] = int(kg_m.group(1))
+                break
+
+        for age_label in ["Age"]:
+            age_div = soup.find(string=age_label)
+            if age_div and age_div.parent and age_div.parent.find_next_sibling():
+                age_text = age_div.parent.find_next_sibling().get_text(strip=True)
+                age_m = re.search(r'(\d+)', age_text)
+                if age_m:
+                    data['age'] = int(age_m.group(1))
+                break
+
+        accel_div = soup.find('div', class_='player-accelerate-text')
+        if accel_div:
+            data['accelerate_type'] = accel_div.get_text(strip=True)
+        else:
+            for accel_label in ["AcceleRATE", "Accelerate", "AccelType"]:
+                accel_div = soup.find(string=accel_label)
+                if accel_div and accel_div.parent and accel_div.parent.find_next_sibling():
+                    data['accelerate_type'] = accel_div.parent.find_next_sibling().get_text(strip=True)
+                    break
+
+        # 5. Extração direta de 30+ Sub-atributos
+        # Mapa expandido com TODOS os rótulos conhecidos do Futbin (atuais e legados)
         sub_map = {
-            "Acceleration": "acceleration", "Sprint Speed": "sprint_speed",
-            "Finishing": "finishing", "Shot Power": "shot_power",
-            "Long Shots": "long_shots", "Volleys": "volleys",
-            "Positioning": "positioning_att", "Penalties": "penalties",
-            "Short Passing": "short_passing", "Long Passing": "long_passing",
+            # Ritmo (PAC)
+            "Acceleration": "acceleration", "Accel": "acceleration",
+            "Sprint Speed": "sprint_speed", "Sprint Spd": "sprint_speed",
+            # Finalização (SHO)
+            "Finishing": "finishing", "Shot Power": "shot_power", "Shot Pwr": "shot_power",
+            "Long Shots": "long_shots", "Long Shot": "long_shots",
+            "Volleys": "volleys",
+            "Positioning": "positioning_att", "Att. Position": "positioning_att",
+            "Att Position": "positioning_att", "Att.Position": "positioning_att",
+            "Penalties": "penalties", "Penalty": "penalties",
+            # Passe (PAS)
+            "Short Passing": "short_passing", "Short Pass": "short_passing",
+            "Long Passing": "long_passing", "Long Pass": "long_passing",
             "Crossing": "crossing", "Curve": "curve",
             "FK Accuracy": "free_kick", "Free Kick Accuracy": "free_kick",
+            "FK Acc.": "free_kick", "FK Acc": "free_kick", "Free Kick": "free_kick",
             "Vision": "vision",
+            # Drible (DRI)
             "Agility": "agility", "Balance": "balance",
-            "Reactions": "reactions", "Ball Control": "ball_control",
+            "Reactions": "reactions", "Ball Control": "ball_control", "Ball Ctrl": "ball_control",
             "Composure": "composure", "Dribbling": "skill_dribbling",
-            "Interceptions": "interceptions", "Heading Accuracy": "heading",
-            "Heading": "heading", "Def Awareness": "marking",
-            "Defensive Awareness": "marking", "Marking": "marking",
-            "Standing Tackle": "standing_tackle", "Sliding Tackle": "sliding_tackle",
+            # Defesa (DEF)
+            "Interceptions": "interceptions",
+            "Heading Accuracy": "heading", "Heading Acc.": "heading",
+            "Heading Acc": "heading", "Heading": "heading", "Head. Acc.": "heading",
+            "Def Awareness": "marking", "Def. Awareness": "marking",
+            "Defensive Awareness": "marking", "Marking": "marking", "Def Aware": "marking", "Def. Aware": "marking",
+            "Defensive Awareness": "marking", "Marking": "marking", "Def Aware": "marking",
+            "Standing Tackle": "standing_tackle", "Stand Tackle": "standing_tackle",
+            "Stand. Tackle": "standing_tackle",
+            "Sliding Tackle": "sliding_tackle", "Slide Tackle": "sliding_tackle",
+            "Slide. Tackle": "sliding_tackle",
+            # Físico (PHY)
             "Jumping": "jumping", "Stamina": "stamina",
             "Strength": "strength", "Aggression": "aggression",
+            # Goleiro
             "GK Diving": "gk_diving", "GK Handling": "gk_handling",
             "GK Kicking": "gk_kicking", "GK Positioning": "gk_positioning",
             "GK Reflexes": "gk_reflexes",
@@ -774,7 +856,8 @@ async def _fetch_and_parse_player(session: aiohttp.ClientSession, url: str) -> d
                 return int(str(val).strip())
             except Exception:
                 return None
-                
+        
+        # Seletores primários: .player-stat-row com .player-stat-name/.player-stat-value
         for stat_row in soup.select(".player-stat-row"):
             name_el = stat_row.select_one(".player-stat-name")
             val_el = stat_row.select_one(".player-stat-value")
@@ -785,6 +868,18 @@ async def _fetch_and_parse_player(session: aiohttp.ClientSession, url: str) -> d
                     val = safe_int(val_el.get_text(strip=True))
                     if val and 1 <= val <= 99:
                         data[col] = val
+
+        # Fallback: seletores alternativos do Futbin (tr com sub-stat) 
+        if not data.get("short_passing"):
+            for row_el in soup.select("tr, .stat-row, .sub-stat-row, div[class*='stat']"): 
+                cells = row_el.find_all(["td", "span", "div"])
+                if len(cells) >= 2:
+                    label_text = cells[0].get_text(strip=True)
+                    col = sub_map.get(label_text)
+                    if col and col not in data:
+                        val = safe_int(cells[-1].get_text(strip=True))
+                        if val and 1 <= val <= 99:
+                            data[col] = val
 
         return data
     except Exception as e:
@@ -1012,12 +1107,10 @@ async def _process_single_sbc(
                         if ea_item_id:
                             logger.info(f"EA Item ID extraído: {ea_item_id}. Buscando no FutGG...")
                             
-                            from backend.scripts.scrape_players_v2 import scrape_futgg_card_image, download_image
+                            from backend.scripts.scrape_master import scrape_futgg_card_image, download_binary_file
                             futgg_data = await scrape_futgg_card_image(
                                 session=http,
                                 player_name=player_card.name,
-                                overall=player_card.overall,
-                                futbin_id=player_card.futbin_id or ea_item_id,
                                 ea_item_id=ea_item_id
                             )
                             
@@ -1027,7 +1120,7 @@ async def _process_single_sbc(
                                 
                                 # Fazer download físico
                                 abs_full_path.parent.mkdir(parents=True, exist_ok=True)
-                                download_success = await download_image(http, hd_url, abs_full_path)
+                                download_success = await download_binary_file(http, hd_url, abs_full_path)
                                 if download_success:
                                     # Remover fundo branco
                                     logger.info("Removendo fundo branco da imagem baixada do FutGG...")
