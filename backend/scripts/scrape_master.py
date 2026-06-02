@@ -152,6 +152,215 @@ def safe_int(val) -> Optional[int]:
         return None
 
 
+def playstyle_slug(name: str) -> str:
+    """Normaliza nome de PlayStyle para slug estável."""
+    return sanitize(name)
+
+
+def detect_playstyle_plus(name: str = "", icon_url: str = "", classes: List[str] | Tuple[str, ...] = ()) -> bool:
+    """Detecta PlayStyle+ por classe, URL ou texto."""
+    text = " ".join([name or "", icon_url or "", " ".join(classes or [])]).lower()
+    return any(
+        marker in text
+        for marker in (
+            "/plus/",
+            "-plus",
+            "_plus",
+            "psplus",
+            "playstyle-plus",
+            "playstyle_plus",
+            "playstyle+",
+            " plus ",
+            "gold",
+        )
+    )
+
+
+def normalize_playstyle(raw, source: str = "unknown") -> Optional[dict]:
+    """Converte PlayStyle bruto para contrato canônico salvo no banco."""
+    if not raw:
+        return None
+    item = {"name": raw} if isinstance(raw, str) else dict(raw) if isinstance(raw, dict) else None
+    if not item:
+        return None
+
+    name = item.get("name") or item.get("title") or item.get("label") or item.get("alt") or ""
+    icon_url = item.get("icon_url") or item.get("icon_path") or item.get("src") or ""
+    classes = item.get("classes") or []
+    tier = str(item.get("tier") or "").lower()
+    is_plus_raw = item.get("is_plus")
+    is_plus = (
+        is_plus_raw is True or
+        str(is_plus_raw).strip().lower() in {"1", "true", "yes", "plus", "playstyle+", "psplus"} or
+        tier == "plus" or
+        detect_playstyle_plus(str(name), str(icon_url), classes)
+    )
+
+    clean_name = re.sub(r"\s*(playstyle\+|\+)$", "", str(name), flags=re.I).strip()
+    slug = item.get("slug") or playstyle_slug(clean_name)
+    if not clean_name and slug == "unknown":
+        return None
+
+    item_source = item.get("source") or source
+    verified = item.get("verified_by_futgg")
+    if verified is None:
+        verified = item_source in {"futgg", "futgg_fallback"}
+
+    return {
+        "name": clean_name or slug.replace("_", " ").title(),
+        "slug": slug,
+        "icon_url": icon_url,
+        "is_plus": bool(is_plus),
+        "tier": "plus" if is_plus else "base",
+        "source": item_source,
+        "verified_by_futgg": bool(verified),
+    }
+
+
+def normalize_playstyles(raw_playstyles, source: str = "unknown") -> List[dict]:
+    """Normaliza lista/JSON de PlayStyles e deduplica por slug, preferindo Plus."""
+    if isinstance(raw_playstyles, str):
+        try:
+            raw_playstyles = json.loads(raw_playstyles)
+        except json.JSONDecodeError:
+            raw_playstyles = []
+    if not isinstance(raw_playstyles, list):
+        return []
+
+    by_slug = {}
+    for raw in raw_playstyles:
+        normalized = normalize_playstyle(raw, source=source)
+        if not normalized:
+            continue
+        existing = by_slug.get(normalized["slug"])
+        if not existing or (normalized["is_plus"] and not existing.get("is_plus")):
+            by_slug[normalized["slug"]] = normalized
+    return list(by_slug.values())
+
+
+def merge_playstyle_sources(futbin_playstyles, futgg_playstyles) -> List[dict]:
+    """Futbin vence quando apresenta PlayStyles; FutGG só cobre ausência total."""
+    futbin = normalize_playstyles(futbin_playstyles, source="futbin")
+    if futbin:
+        for item in futbin:
+            item["source"] = "futbin"
+            item["verified_by_futgg"] = False
+        return futbin
+
+    fallback = normalize_playstyles(futgg_playstyles, source="futgg_fallback")
+    for item in fallback:
+        item["source"] = "futgg_fallback"
+        item["verified_by_futgg"] = True
+    return fallback
+
+
+def filter_plus_playstyles(raw_playstyles) -> List[dict]:
+    """Retorna só PlayStyles+ renderizáveis."""
+    return [
+        item for item in normalize_playstyles(raw_playstyles, source="unknown")
+        if item.get("tier") == "plus" or item.get("is_plus") is True
+    ]
+
+
+def playstyles_are_current(raw_playstyles) -> bool:
+    """Confere se PlayStyles existem e já usam schema canônico atual."""
+    if isinstance(raw_playstyles, str):
+        try:
+            parsed = json.loads(raw_playstyles)
+        except json.JSONDecodeError:
+            return False
+    else:
+        parsed = raw_playstyles
+
+    if not isinstance(parsed, list) or not parsed:
+        return False
+
+    required = {"name", "slug", "icon_url", "is_plus", "tier", "source", "verified_by_futgg"}
+    for item in parsed:
+        if not isinstance(item, dict) or not required.issubset(item.keys()):
+            return False
+
+    return bool(normalize_playstyles(parsed, source="db"))
+
+
+def _playstyle_element_name(el) -> str:
+    title = (
+        el.get("title") or el.get("aria-label") or el.get("data-original-title") or
+        el.get("data-tooltip") or el.get("alt") or ""
+    )
+    if title:
+        return str(title).strip()
+
+    img = el.select_one("img")
+    if img:
+        img_title = img.get("title") or img.get("alt") or img.get("aria-label") or ""
+        if img_title:
+            return str(img_title).strip()
+
+    label = el.select_one(".slim-font, [class*='name'], [class*='label'], span, div")
+    return label.get_text(" ", strip=True) if label else el.get_text(" ", strip=True)
+
+
+def _playstyle_element_icon_url(el) -> str:
+    img = el if el.name == "img" else el.select_one("img")
+    if not img:
+        return ""
+    return img.get("src") or img.get("data-src") or img.get("data-original") or ""
+
+
+def extract_futbin_playstyles(soup: BeautifulSoup) -> List[dict]:
+    """Extrai PlayStyles ativos do Futbin."""
+    playstyles = []
+    wrappers = soup.select(".player-abilities-wrapper:not(.hidden)")
+    candidates = []
+    for wrapper in wrappers:
+        candidates.extend(wrapper.select("a[href*='/playstyles/']"))
+    if not candidates:
+        candidates = soup.select("a[href*='/playstyles/'], .playstyle-icon")
+
+    for el in candidates:
+        classes = el.get("class", [])
+        if "active" not in classes and el.name != "img" and not el.select_one("img"):
+            continue
+        normalized = normalize_playstyle({
+            "name": _playstyle_element_name(el),
+            "icon_url": _playstyle_element_icon_url(el),
+            "classes": classes,
+            "is_plus": "psplus" in classes,
+        }, source="futbin")
+        if normalized:
+            playstyles.append(normalized)
+    return normalize_playstyles(playstyles, source="futbin")
+
+
+def extract_futgg_playstyles(soup: BeautifulSoup) -> List[dict]:
+    """Extrai PlayStyles do FutGG para fallback quando Futbin não retorna nenhum."""
+    selectors = [
+        "a[href*='playstyle']",
+        "[class*='playstyle']",
+        "img[src*='playstyle']",
+        "img[src*='playstyles']",
+    ]
+    seen_nodes = []
+    for selector in selectors:
+        for el in soup.select(selector):
+            if el not in seen_nodes:
+                seen_nodes.append(el)
+
+    playstyles = []
+    for el in seen_nodes:
+        classes = el.get("class", [])
+        normalized = normalize_playstyle({
+            "name": _playstyle_element_name(el),
+            "icon_url": _playstyle_element_icon_url(el),
+            "classes": classes,
+            "is_plus": detect_playstyle_plus(_playstyle_element_name(el), _playstyle_element_icon_url(el), classes),
+        }, source="futgg")
+        if normalized:
+            playstyles.append(normalized)
+    return normalize_playstyles(playstyles, source="futgg")
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # BANCO DE DADOS — Verificação, Migração e Skip
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -261,16 +470,20 @@ def is_player_complete(futbin_id: str, name: str) -> bool:
     cur = conn.cursor()
     try:
         cur.execute(
-            "SELECT detail_scraped_at, card_template_url, acceleration, nation_flag_url, club_logo_url, league_logo_url, league FROM fc_players WHERE futbin_id = ?",
+            "SELECT detail_scraped_at, card_template_url, acceleration, nation_flag_url, club_logo_url, league_logo_url, league, playstyles_json FROM fc_players WHERE futbin_id = ?",
             (str(futbin_id),)
         )
         row = cur.fetchone()
         if not row:
             return False
 
-        detail_scraped, card_url, accel, nation_flag, club_logo, league_logo, league = row
+        detail_scraped, card_url, accel, nation_flag, club_logo, league_logo, league, playstyles_json = row
         # Jogador completo = detalhes raspados + card salvo + sub-atributos preenchidos
         if not detail_scraped or not card_url or accel is None:
+            return False
+
+        # PlayStyles fazem parte da completude. Se faltar, reprocessa só para atualizar metadados.
+        if not playstyles_are_current(playstyles_json):
             return False
 
         # Verificar se as bandeiras/logos obrigatórios existem e são caminhos locais (/images/)
@@ -331,7 +544,15 @@ def upsert_player_sqlite(player_data: dict) -> bool:
             "club":             player_data.get("club"),
             "league":           player_data.get("league"),
             "card_type":        player_data.get("card_type"),
-            "face_url":         player_data.get("face_url_raw") or player_data.get("face_url"),
+            # FIX: For special cards the listing-page face_url_raw is always the BASE gold
+            # face of the player (e.g. /players/p{id}.png), NOT the special card render.
+            # The correct face is always the locally-downloaded render_url.
+            # Priority: render_url (local, correct) > face_url (if already local path) > face_url_raw (remote fallback)
+            "face_url":         (
+                player_data.get("render_url") or          # locally-downloaded render (always correct)
+                (player_data.get("face_url") if (player_data.get("face_url") or "").startswith("/images/") else None) or  # local path already stored
+                player_data.get("face_url_raw")            # raw remote URL (fallback only)
+            ),
             "bg_url_raw":       player_data.get("bg_url_raw"),
             "card_template_url": player_data.get("card_template_url"),
             "render_url":       player_data.get("render_url"),
@@ -779,31 +1000,7 @@ async def scrape_futbin_player_detail(
 
     # ── Playstyles ──
     try:
-        playstyles = []
-        active_wrapper = soup.select_one(".player-abilities-wrapper:not(.hidden)")
-        if active_wrapper:
-            for anchor in active_wrapper.select("a[href*='/playstyles/']"):
-                classes = anchor.get("class", [])
-                if "active" in classes:
-                    name_el = anchor.select_one(".slim-font, div")
-                    if name_el:
-                        ps_name = name_el.get_text(strip=True)
-                        is_plus = "psplus" in classes
-                        img_el = anchor.select_one("img")
-                        icon = img_el.get("src", "") if img_el else ""
-                        playstyles.append({"name": ps_name, "is_plus": is_plus, "icon_url": icon})
-        # Fallback se não achou wrapper
-        if not playstyles:
-            for anchor in soup.select("a[href*='/playstyles/']"):
-                classes = anchor.get("class", [])
-                if "active" in classes:
-                    name_el = anchor.select_one(".slim-font, div")
-                    if name_el:
-                        ps_name = name_el.get_text(strip=True)
-                        is_plus = "psplus" in classes
-                        img_el = anchor.select_one("img")
-                        icon = img_el.get("src", "") if img_el else ""
-                        playstyles.append({"name": ps_name, "is_plus": is_plus, "icon_url": icon})
+        playstyles = extract_futbin_playstyles(soup)
         if playstyles:
             data["playstyles_json"] = json.dumps(playstyles, ensure_ascii=False)
     except Exception:
@@ -896,6 +1093,13 @@ async def scrape_futgg_card_image(
         if "cdn-cgi/image" in r_url:
             r_url = re.sub(r"cdn-cgi/image/[^/]*/", "", r_url)
         result["futgg_render_url"] = r_url
+
+    try:
+        playstyles = extract_futgg_playstyles(soup)
+        if playstyles:
+            result["futgg_playstyles_json"] = json.dumps(playstyles, ensure_ascii=False)
+    except Exception:
+        pass
 
     result["futgg_player_id"] = ea_item_id
     return result
@@ -1146,8 +1350,15 @@ async def process_single_player(
     if isinstance(results[1], Exception):
         logger.debug(f"FutGG falhou para {name}: {results[1]}")
 
+    merged_playstyles = merge_playstyle_sources(
+        futbin_detail.get("playstyles_json"),
+        futgg_data.get("futgg_playstyles_json"),
+    )
+
     # Mesclar dados
     player_combined = {**player_basic, **futbin_detail, **futgg_data}
+    if merged_playstyles:
+        player_combined["playstyles_json"] = json.dumps(merged_playstyles, ensure_ascii=False)
 
     # F4 + F5: Download e pós-processamento
     image_paths = await download_and_process_images(session_futbin, player_combined, futbin_id)

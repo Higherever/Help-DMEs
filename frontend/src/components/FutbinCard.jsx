@@ -1,6 +1,35 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
+const slugPlaystyle = (name = '') =>
+  String(name)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9\s_-]/g, '')
+    .trim()
+    .replace(/[\s_-]+/g, '_')
+    .toLowerCase();
+
+const isPlusPlaystyle = (ps = {}) => {
+  const tier = String(ps.tier || '').toLowerCase();
+  const url = String(ps.icon_url || ps.icon_path || '').toLowerCase();
+  const name = String(ps.name || '').toLowerCase();
+  return ps.is_plus === true || tier === 'plus' || url.includes('/plus/') || name.includes('playstyle+');
+};
+
+const filterPlusPlaystyles = (items = []) => {
+  const bySlug = new Map();
+
+  items.forEach((ps) => {
+    if (!isPlusPlaystyle(ps)) return;
+    const slug = ps.slug || slugPlaystyle(ps.name);
+    if (!slug || bySlug.has(slug)) return;
+    bySlug.set(slug, { ...ps, slug, is_plus: true, tier: 'plus' });
+  });
+
+  return Array.from(bySlug.values());
+};
+
 /**
  * FutbinCard — Card de jogador EA FC 26 via CSS Puro.
  *
@@ -70,6 +99,7 @@ const FutbinCard = ({ data, size = 'lg', className = '', showDetails = false }) 
   if (typeof data.playstyles_json === 'string' && !playstyles.length) {
     try { playstyles = JSON.parse(data.playstyles_json); } catch { playstyles = []; }
   }
+  playstyles = filterPlusPlaystyles(playstyles);
 
   // ── Sub-atributos ──
   const subStats = buildSubStats(data);

@@ -33,6 +33,7 @@ from backend.models.models import (
 from backend.services.image_processor import download_and_process_card_bg, remove_white_background_inplace
 from backend.services.card_screenshot import CardScreenshotService
 from backend.services.translation_service import translator
+from backend.scripts.scrape_master import extract_futbin_playstyles
 
 logger = logging.getLogger("help_dmes.futbin")
 
@@ -717,15 +718,7 @@ async def _fetch_and_parse_player(session: aiohttp.ClientSession, url: str) -> d
             data['league_name'] = (league.get('title') or league.get('alt') or league.get('data-original-title') or '').strip()
         
         # 3. Playstyles
-        ps_elements = soup.select('.playstyle-icon')
-        playstyles = []
-        for p in ps_elements:
-            title = p.get('title', '') or p.get('data-original-title', '')
-            src = p.get('src', '')
-            is_plus = "plus" in src.lower()
-            if title or src:
-                playstyles.append({"name": title, "icon_url": src, "is_plus": is_plus})
-                
+        playstyles = extract_futbin_playstyles(soup)
         data['playstyles'] = playstyles
         
         # 4. Workrates, SM, WF, Alt Pos

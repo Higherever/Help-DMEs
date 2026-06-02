@@ -15,6 +15,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageColor, ImageFilter, ImageOps, 
 
 # Importar motor de bypass do anti-bot
 from backend.services.anti_bot import fetch_binary
+from backend.scripts.scrape_master import filter_plus_playstyles
 
 logger = logging.getLogger("card_renderer")
 
@@ -730,6 +731,46 @@ def draw_default_avatar() -> Image.Image:
     ], fill=gray)
     return avatar
 
+def draw_warning_icon(draw, cx, cy, size=60):
+    # Estilo Material UI Warning: triângulo vermelho com exclamação branca
+    red_color = (211, 47, 47, 255)
+    white_color = (255, 255, 255, 255)
+    
+    # Coordenadas do triângulo
+    top = (cx, cy - size)
+    left = (cx - int(size * 1.15), cy + size)
+    right = (cx + int(size * 1.15), cy + size)
+    
+    draw.polygon([top, left, right], fill=red_color)
+    
+    # Cantos suavizados (círculos nos vértices)
+    r = int(size * 0.15)
+    draw.ellipse([top[0] - r, top[1] - r // 2, top[0] + r, top[1] + r], fill=red_color)
+    draw.ellipse([left[0] - r, left[1] - r, left[0] + r, left[1] + r], fill=red_color)
+    draw.ellipse([right[0] - r, right[1] - r, right[0] + r, right[1] + r], fill=red_color)
+    
+    # Barra da exclamação
+    bar_w = max(2, int(size * 0.12))
+    bar_h_top = cy - int(size * 0.2)
+    bar_h_bot = cy + int(size * 0.3)
+    try:
+        draw.rounded_rectangle(
+            [cx - bar_w // 2, bar_h_top, cx + bar_w // 2, bar_h_bot],
+            radius=int(bar_w // 2),
+            fill=white_color
+        )
+    except AttributeError:
+        # Fallback para Pillow mais antigo
+        draw.rectangle([cx - bar_w // 2, bar_h_top, cx + bar_w // 2, bar_h_bot], fill=white_color)
+        draw.ellipse([cx - bar_w // 2, bar_h_top - bar_w // 2, cx + bar_w // 2, bar_h_top + bar_w // 2], fill=white_color)
+        draw.ellipse([cx - bar_w // 2, bar_h_bot - bar_w // 2, cx + bar_w // 2, bar_h_bot + bar_w // 2], fill=white_color)
+        
+    # Ponto inferior da exclamação
+    dot_r = max(2, int(size * 0.08))
+    dot_cy = cy + int(size * 0.6)
+    draw.ellipse([cx - dot_r, dot_cy - dot_r, cx + dot_r, dot_cy + dot_r], fill=white_color)
+
+
 def sanitize_slug(text: str) -> str:
     if not text:
         return "unknown"
@@ -827,63 +868,37 @@ class CardRendererClient:
         card_type_lower = (player_data.get("card_type") or "").lower()
         is_base_card = card_type_lower in BASE_CARD_TYPES_RENDER
 
-        # Resolução inteligente de face do jogador (escolhe a imagem de maior qualidade disponível)
+        # Resolução inteligente de face do jogador (com validação estrita de compatibilidade)
         face_local = None
         face_paths = []
         portraits_dir = IMAGES_DIR / "cards" / "portraits"
         renders_dir = IMAGES_DIR / "cards" / "renders"
 
-        # Se for card base (Gold, Silver, Bronze), buscamos retratos mas também permitimos renders se disponíveis.
-        # Se for card especial (TOTY, Scream, etc.), priorizamos renders completos (corpo inteiro).
         if is_base_card:
-            # Buscar chaves de retrato e render
-            for key in ["portrait_url", "face_url", "render_url"]:
+            # Cards Base (Gold, Silver, Bronze) — DEVEM usar obrigatoriamente retratos (portraits)
+            # 1. Buscar chaves de retrato do banco de dados (ignorando renders)
+            for key in ["portrait_url", "face_url"]:
                 val = player_data.get(key)
-                if val and val.startswith("/images/"):
+                if val and "/cards/portraits/" in val:
                     p = PROJECT_ROOT / val.lstrip("/")
                     if p.exists() and p.stat().st_size > 100:
                         face_paths.append(p)
             
-            # Buscar no diretório físico de retratos
+            # 2. Buscar no diretório físico de retratos pelo futbin_id
             possible_portraits = list(portraits_dir.glob(f"portrait_{futbin_id}_*.png")) if portraits_dir.exists() else []
             for p in possible_portraits:
-                face_paths.append(p)
-
-            # Buscar no diretório físico de renders para o mesmo futbin_id (render de alta qualidade do FC 26)
-            possible_renders = list(renders_dir.glob(f"render_{futbin_id}_*.png")) if renders_dir.exists() else []
-            for p in possible_renders:
                 face_paths.append(p)
         else:
-            # Buscar chaves de render
+            # Cards Especiais (TOTS, Fut Birthday, etc.) — DEVEM usar obrigatoriamente renders
+            # 1. Buscar chaves de render do banco de dados (ignorando portraits)
             for key in ["render_url", "face_url"]:
                 val = player_data.get(key)
-                if val and val.startswith("/images/"):
+                if val and "/cards/renders/" in val:
                     p = PROJECT_ROOT / val.lstrip("/")
                     if p.exists() and p.stat().st_size > 100:
                         face_paths.append(p)
             
-            # Buscar no diretório físico de renders
-            possible_renders = list(renders_dir.glob(f"render_{futbin_id}_*.png")) if renders_dir.exists() else []
-            for p in possible_renders:
-                face_paths.append(p)
-                
-            p_id = renders_dir / f"{futbin_id}.png"
-            if p_id.exists():
-                face_paths.append(p_id)
-
-        # Fallback completo se nenhum fluxo específico encontrar imagens
-        if not face_paths:
-            for key in ["face_url", "render_url", "portrait_url"]:
-                val = player_data.get(key)
-                if val and val.startswith("/images/"):
-                    p = PROJECT_ROOT / val.lstrip("/")
-                    if p.exists() and p.stat().st_size > 100:
-                        face_paths.append(p)
-                        
-            possible_portraits = list(portraits_dir.glob(f"portrait_{futbin_id}_*.png")) if portraits_dir.exists() else []
-            for p in possible_portraits:
-                face_paths.append(p)
-                
+            # 2. Buscar no diretório físico de renders pelo futbin_id
             possible_renders = list(renders_dir.glob(f"render_{futbin_id}_*.png")) if renders_dir.exists() else []
             for p in possible_renders:
                 face_paths.append(p)
@@ -899,7 +914,8 @@ class CardRendererClient:
             face_local = str(unique_paths[0])
             logger.debug(f"[Renderer] Face resolvida com maior qualidade ({'base' if is_base_card else 'especial'}): {Path(face_local).name} ({unique_paths[0].stat().st_size} bytes)")
         else:
-            logger.warning(f"[Renderer] Nenhuma face/portrait encontrada para ID {futbin_id} ({card_type_lower}).")
+            logger.warning(f"[Renderer] Nenhuma face compatível ou correspondente encontrada para ID {futbin_id} ({card_type_lower}). Ativando sinal de erro.")
+            face_local = "__ERROR_FACE__"
 
         # Template de fundo: usa o arquivo local dyn_* gerado pelo scraper ou baixa versão HD sob demanda
         bg_local = None
@@ -1050,15 +1066,11 @@ class CardRendererClient:
         playstyles_payload = []
         seen_slugs = set()
         
-        for idx, ps in enumerate(playstyles_input):
+        for idx, ps in enumerate(filter_plus_playstyles(playstyles_input)):
             ps_url = ps.get("icon_url") or ps.get("icon_path")
             if ps_url:
                 ps_name = ps.get("name", f"ps_{idx}")
-                is_plus = ps.get("is_plus", False) or "plus" in ps_name.lower() or "plus" in ps_url.lower()
-                
-                # Regra: Renderizar apenas Playstyles+ (omitir os base)
-                if not is_plus:
-                    continue
+                is_plus = True
                     
                 ps_slug = sanitize_slug(ps_name).replace("_plus", "")
                 
@@ -1257,8 +1269,9 @@ class CardRendererClient:
         # 2. Carregar e Colar Foto do Jogador
         face_path_str = data.get("face_path")
         face_loaded = False
+        is_error_face = (face_path_str == "__ERROR_FACE__")
         
-        if face_path_str:
+        if face_path_str and not is_error_face:
             face_path = Path(face_path_str)
             if face_path.exists():
                 try:
@@ -1287,9 +1300,14 @@ class CardRendererClient:
                 except Exception as e:
                     logger.error(f"Erro ao colar face do jogador: {e}")
                     
-        if not face_loaded:
+        if not face_loaded or is_error_face:
             default_av = draw_default_avatar()
             canvas.alpha_composite(default_av, (0, 0))
+            
+            # Desenhar o sinal de erro (Warning Icon) sobre o avatar padrão
+            draw_warn = ImageDraw.Draw(canvas)
+            cx, cy = px(0.53), py(0.42)
+            draw_warning_icon(draw_warn, cx, cy, size=65)
             
         draw = ImageDraw.Draw(canvas)
         
