@@ -765,10 +765,10 @@ async def ensure_asset_local(
         
     if url.startswith("/images/"):
         local_target = PROJECT_ROOT / url.lstrip("/")
-        if local_target.exists() and local_target.stat().st_size > 200:
+        if local_target.exists() and local_target.stat().st_size > 100:
             return str(local_target.resolve())
             
-    if dest_path.exists() and dest_path.stat().st_size > 200:
+    if dest_path.exists() and dest_path.stat().st_size > 100:
         return str(dest_path.resolve())
         
     if "futbin.com" in url:
@@ -782,7 +782,7 @@ async def ensure_asset_local(
     try:
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         data = await fetch_binary(session, clean_url)
-        if data and len(data) > 200:
+        if data and len(data) > 100:
             async with aiofiles.open(dest_path, "wb") as f:
                 await f.write(data)
             logger.debug(f"[Renderer Cache] Baixou asset com sucesso para: {dest_path.name}")
@@ -830,35 +830,74 @@ class CardRendererClient:
         # Resolução inteligente de face do jogador (escolhe a imagem de maior qualidade disponível)
         face_local = None
         face_paths = []
-        for key in ["face_url", "render_url", "portrait_url"]:
-            val = player_data.get(key)
-            if val and val.startswith("/images/"):
-                p = PROJECT_ROOT / val.lstrip("/")
-                if p.exists() and p.stat().st_size > 200:
-                    face_paths.append(p)
-                    
-        # Fallbacks em caso de falha de mapeamento de banco
         portraits_dir = IMAGES_DIR / "cards" / "portraits"
         renders_dir = IMAGES_DIR / "cards" / "renders"
-        
-        possible_portraits = list(portraits_dir.glob(f"portrait_{futbin_id}_*.png")) if portraits_dir.exists() else []
-        for p in possible_portraits:
-            face_paths.append(p)
+
+        # Se for card base (Gold, Silver, Bronze), buscamos retratos mas também permitimos renders se disponíveis.
+        # Se for card especial (TOTY, Scream, etc.), priorizamos renders completos (corpo inteiro).
+        if is_base_card:
+            # Buscar chaves de retrato e render
+            for key in ["portrait_url", "face_url", "render_url"]:
+                val = player_data.get(key)
+                if val and val.startswith("/images/"):
+                    p = PROJECT_ROOT / val.lstrip("/")
+                    if p.exists() and p.stat().st_size > 100:
+                        face_paths.append(p)
             
-        possible_renders = list(renders_dir.glob(f"render_{futbin_id}_*.png")) if renders_dir.exists() else []
-        for p in possible_renders:
-            face_paths.append(p)
+            # Buscar no diretório físico de retratos
+            possible_portraits = list(portraits_dir.glob(f"portrait_{futbin_id}_*.png")) if portraits_dir.exists() else []
+            for p in possible_portraits:
+                face_paths.append(p)
+
+            # Buscar no diretório físico de renders para o mesmo futbin_id (render de alta qualidade do FC 26)
+            possible_renders = list(renders_dir.glob(f"render_{futbin_id}_*.png")) if renders_dir.exists() else []
+            for p in possible_renders:
+                face_paths.append(p)
+        else:
+            # Buscar chaves de render
+            for key in ["render_url", "face_url"]:
+                val = player_data.get(key)
+                if val and val.startswith("/images/"):
+                    p = PROJECT_ROOT / val.lstrip("/")
+                    if p.exists() and p.stat().st_size > 100:
+                        face_paths.append(p)
             
-        p_id = renders_dir / f"{futbin_id}.png"
-        if p_id.exists():
-            face_paths.append(p_id)
-            
+            # Buscar no diretório físico de renders
+            possible_renders = list(renders_dir.glob(f"render_{futbin_id}_*.png")) if renders_dir.exists() else []
+            for p in possible_renders:
+                face_paths.append(p)
+                
+            p_id = renders_dir / f"{futbin_id}.png"
+            if p_id.exists():
+                face_paths.append(p_id)
+
+        # Fallback completo se nenhum fluxo específico encontrar imagens
+        if not face_paths:
+            for key in ["face_url", "render_url", "portrait_url"]:
+                val = player_data.get(key)
+                if val and val.startswith("/images/"):
+                    p = PROJECT_ROOT / val.lstrip("/")
+                    if p.exists() and p.stat().st_size > 100:
+                        face_paths.append(p)
+                        
+            possible_portraits = list(portraits_dir.glob(f"portrait_{futbin_id}_*.png")) if portraits_dir.exists() else []
+            for p in possible_portraits:
+                face_paths.append(p)
+                
+            possible_renders = list(renders_dir.glob(f"render_{futbin_id}_*.png")) if renders_dir.exists() else []
+            for p in possible_renders:
+                face_paths.append(p)
+                
+            p_id = renders_dir / f"{futbin_id}.png"
+            if p_id.exists():
+                face_paths.append(p_id)
+
         # Filtra duplicatas e ordena por tamanho em disco (maior resolução e detalhes)
         if face_paths:
             unique_paths = list(set(p.resolve() for p in face_paths))
             unique_paths.sort(key=lambda p: p.stat().st_size, reverse=True)
             face_local = str(unique_paths[0])
-            logger.debug(f"[Renderer] Face resolvida com maior qualidade: {Path(face_local).name} ({unique_paths[0].stat().st_size} bytes)")
+            logger.debug(f"[Renderer] Face resolvida com maior qualidade ({'base' if is_base_card else 'especial'}): {Path(face_local).name} ({unique_paths[0].stat().st_size} bytes)")
         else:
             logger.warning(f"[Renderer] Nenhuma face/portrait encontrada para ID {futbin_id} ({card_type_lower}).")
 
@@ -898,49 +937,69 @@ class CardRendererClient:
                     except Exception as e:
                         logger.warning(f"[Renderer] Falha ao obter template HD para {name}: {e}")
             
-            if dyn_path.exists() and dyn_path.stat().st_size > 200:
+            if dyn_path.exists() and dyn_path.stat().st_size > 100:
                 bg_local = str(dyn_path.resolve())
                 logger.debug(f"[Renderer] Template local encontrado: {dyn_path.name} ({dyn_path.stat().st_size} bytes)")
             else:
                 logger.warning(f"[Renderer] Template não encontrado localmente: {dyn_path.name}.")
 
-        # Bandeira da nação: caminho local
+        # Bandeira da nação: caminho local ou download
         nation_local = None
         nation_url = player_data.get("nation_flag_url") or player_data.get("nation_url")
-        if nation_url and nation_url.startswith("/images/"):
-            local_nation = PROJECT_ROOT / nation_url.lstrip("/")
-            if local_nation.exists() and local_nation.stat().st_size > 200:
-                nation_local = str(local_nation.resolve())
         nation_slug = sanitize_slug(player_data.get("nation", "unknown"))
+        
+        # Ignorar caminhos locais genéricos para "unknown" se o slug for conhecido
+        if nation_url and "nation_unknown" in str(nation_url) and nation_slug != "unknown":
+            nation_url = None
+            
+        if nation_url:
+            if nation_url.startswith("/images/"):
+                local_nation = PROJECT_ROOT / nation_url.lstrip("/")
+                if local_nation.exists() and local_nation.stat().st_size > 100:
+                    nation_local = str(local_nation.resolve())
+            elif nation_url.startswith("http"):
+                dest_path = IMAGES_DIR / "cards" / "nations" / f"nation_{nation_slug}.png"
+                nation_local = await ensure_asset_local(session, nation_url, dest_path)
+                
         if not nation_local:
             nation_path_fallback = IMAGES_DIR / "cards" / "nations" / f"nation_{nation_slug}.png"
-            if nation_path_fallback.exists() and nation_path_fallback.stat().st_size > 200:
+            if nation_path_fallback.exists() and nation_path_fallback.stat().st_size > 100:
                 nation_local = str(nation_path_fallback.resolve())
 
-        # Logo do clube: caminho local
+        # Logo do clube: caminho local ou download
         club_local = None
         club_url = player_data.get("club_logo_url") or player_data.get("club_url")
-        if club_url and club_url.startswith("/images/"):
-            local_club = PROJECT_ROOT / club_url.lstrip("/")
-            if local_club.exists() and local_club.stat().st_size > 200:
-                club_local = str(local_club.resolve())
         club_slug = sanitize_slug(player_data.get("club", "unknown"))
+        if club_url:
+            if club_url.startswith("/images/"):
+                local_club = PROJECT_ROOT / club_url.lstrip("/")
+                if local_club.exists() and local_club.stat().st_size > 100:
+                    club_local = str(local_club.resolve())
+            elif club_url.startswith("http"):
+                dest_path = IMAGES_DIR / "cards" / "clubs" / f"club_{club_slug}.png"
+                club_local = await ensure_asset_local(session, club_url, dest_path)
+                
         if not club_local:
             club_path_fallback = IMAGES_DIR / "cards" / "clubs" / f"club_{club_slug}.png"
-            if club_path_fallback.exists() and club_path_fallback.stat().st_size > 200:
+            if club_path_fallback.exists() and club_path_fallback.stat().st_size > 100:
                 club_local = str(club_path_fallback.resolve())
 
-        # Logo da liga: caminho local
+        # Logo da liga: caminho local ou download
         league_local = None
         league_url = player_data.get("league_logo_url") or player_data.get("league_url")
-        if league_url and league_url.startswith("/images/"):
-            local_league = PROJECT_ROOT / league_url.lstrip("/")
-            if local_league.exists() and local_league.stat().st_size > 200:
-                league_local = str(local_league.resolve())
         league_slug = sanitize_slug(player_data.get("league", "unknown"))
+        if league_url:
+            if league_url.startswith("/images/"):
+                local_league = PROJECT_ROOT / league_url.lstrip("/")
+                if local_league.exists() and local_league.stat().st_size > 100:
+                    league_local = str(local_league.resolve())
+            elif league_url.startswith("http"):
+                dest_path = IMAGES_DIR / "cards" / "leagues" / f"league_{league_slug}.png"
+                league_local = await ensure_asset_local(session, league_url, dest_path)
+                
         if not league_local:
             league_path_fallback = IMAGES_DIR / "cards" / "leagues" / f"league_{league_slug}.png"
-            if league_path_fallback.exists() and league_path_fallback.stat().st_size > 200:
+            if league_path_fallback.exists() and league_path_fallback.stat().st_size > 100:
                 league_local = str(league_path_fallback.resolve())
 
         # Tratar Playstyles
@@ -1018,17 +1077,32 @@ class CardRendererClient:
                         "slug": ps_slug
                     })
 
-        # Tratar estatísticas (PAC, SHO, PAS, DRI, DEF, PHY)
+        # Tratar estatísticas (PAC, SHO, PAS, DRI, DEF, PHY ou DIV, HAN, KIC, REF, SPD, POS para goleiro)
         stats_input = player_data.get("stats") or []
-        if not stats_input and "pace" in player_data:
-            stats_input = [
-                {"name": "PAC", "value": player_data.get("pace") or 0},
-                {"name": "SHO", "value": player_data.get("shooting") or 0},
-                {"name": "PAS", "value": player_data.get("passing") or 0},
-                {"name": "DRI", "value": player_data.get("dribbling_stat") or player_data.get("dribbling") or 0},
-                {"name": "DEF", "value": player_data.get("defending") or 0},
-                {"name": "PHY", "value": player_data.get("physic") or player_data.get("physical") or 0},
-            ]
+        raw_position = player_data.get("position", "ST")
+        is_gk = False
+        if raw_position:
+            is_gk = "GK" in str(raw_position).upper()
+
+        if not stats_input:
+            if is_gk:
+                stats_input = [
+                    {"name": "DIV", "value": player_data.get("gk_diving") or player_data.get("diving") or 0},
+                    {"name": "HAN", "value": player_data.get("gk_handling") or player_data.get("handling") or 0},
+                    {"name": "KIC", "value": player_data.get("gk_kicking") or player_data.get("kicking") or 0},
+                    {"name": "REF", "value": player_data.get("gk_reflexes") or player_data.get("reflexes") or 0},
+                    {"name": "SPD", "value": player_data.get("pace") or player_data.get("speed") or player_data.get("gk_speed") or 0},
+                    {"name": "POS", "value": player_data.get("gk_positioning") or player_data.get("positioning") or player_data.get("gk_positioning_stat") or 0},
+                ]
+            elif "pace" in player_data:
+                stats_input = [
+                    {"name": "PAC", "value": player_data.get("pace") or 0},
+                    {"name": "SHO", "value": player_data.get("shooting") or 0},
+                    {"name": "PAS", "value": player_data.get("passing") or 0},
+                    {"name": "DRI", "value": player_data.get("dribbling_stat") or player_data.get("dribbling") or 0},
+                    {"name": "DEF", "value": player_data.get("defending") or 0},
+                    {"name": "PHY", "value": player_data.get("physic") or player_data.get("physical") or 0},
+                ]
 
         # Parser dinâmico de Posição Principal, Posições Alternativas e Role Plus
         raw_position = player_data.get("position", "ST")
@@ -1439,17 +1513,29 @@ class CardRendererClient:
         draw.text((CARD_W // 2, zona_nome), data.get("name", "PLAYER").upper(),
                   font=font_bebas(font_name), fill=card_color, anchor="mm")
                   
-        # 7b — Atributos
+        # 7b — Atributos (Dinâmico para Goleiros)
         stats_list = data.get("stats") or []
         stats_dict = {s["name"].upper(): s["value"] for s in stats_list if "name" in s and "value" in s}
-        stats = [
-            ("PAC", stats_dict.get("PAC", 0)),
-            ("SHO", stats_dict.get("SHO", 0)),
-            ("PAS", stats_dict.get("PAS", 0)),
-            ("DRI", stats_dict.get("DRI", 0)),
-            ("DEF", stats_dict.get("DEF", 0)),
-            ("PHY", stats_dict.get("PHY", 0)),
-        ]
+        is_gk = "GK" in str(data.get("position", "")).upper()
+        
+        if is_gk:
+            stats = [
+                ("DIV", stats_dict.get("DIV", stats_dict.get("GK_DIVING", 0))),
+                ("HAN", stats_dict.get("HAN", stats_dict.get("GK_HANDLING", 0))),
+                ("KIC", stats_dict.get("KIC", stats_dict.get("GK_KICKING", 0))),
+                ("REF", stats_dict.get("REF", stats_dict.get("GK_REFLEXES", 0))),
+                ("SPD", stats_dict.get("SPD", stats_dict.get("PACE", 0))),
+                ("POS", stats_dict.get("POS", stats_dict.get("GK_POSITIONING", 0))),
+            ]
+        else:
+            stats = [
+                ("PAC", stats_dict.get("PAC", 0)),
+                ("SHO", stats_dict.get("SHO", 0)),
+                ("PAS", stats_dict.get("PAS", 0)),
+                ("DRI", stats_dict.get("DRI", 0)),
+                ("DEF", stats_dict.get("DEF", 0)),
+                ("PHY", stats_dict.get("PHY", 0)),
+            ]
         
         font_stat_num = int(pf(1.2)) # ~50 px
         font_stat_label = int(font_stat_num * 0.77) # ~38 px
@@ -1477,43 +1563,64 @@ class CardRendererClient:
         full_path = FULL_DIR / filename
         small_path = SMALL_DIR / filename
         
-        # Full (2x)
-        full_card = canvas.resize((504, 698), Image.Resampling.LANCZOS)
+        # Full (Mantendo 100% da resolução original do canvas: 756 x 1056 px)
+        full_card = canvas
         
-        # 7c — Colar Badges com a máxima nitidez diretamente no full_card (504 x 698)
+        # 7c — Colar Badges com a máxima nitidez diretamente no full_card (756 x 1056)
         # para evitar dupla interpolação/escala e garantir foco nítido pós-geração.
-        badge_size_final = int(504 * 0.0873) # ~44 px
-        badge_gap_final = int(504 * 0.02)   # ~10 px
-        zona_badges_final = int(698 * 0.855) # ~596 px
+        badge_gap_final = int(CARD_W * 0.0212)   # ~16 px
+        zona_badges_final = int(CARD_H * 0.855) # ~902 px
         
-        badge_paths = []
-        for path_key in ["nation_path", "league_path", "club_path"]:
-            p = data.get(path_key)
-            if p and Path(p).exists():
-                badge_paths.append(str(Path(p).resolve()))
-                
-        if badge_paths:
-            total_badge_w = len(badge_paths) * badge_size_final + (len(badge_paths) - 1) * badge_gap_final
-            badge_start_x = (504 - total_badge_w) // 2
-            badge_y = zona_badges_final - badge_size_final // 2
+        badges_info = []
+        # Nação
+        p_nation = data.get("nation_path")
+        if p_nation and Path(p_nation).exists():
+            badges_info.append({
+                "path": str(Path(p_nation).resolve()),
+                "w": 72,
+                "h": 48
+            })
+        # Liga
+        p_league = data.get("league_path")
+        if p_league and Path(p_league).exists():
+            badges_info.append({
+                "path": str(Path(p_league).resolve()),
+                "w": 48,
+                "h": 48
+            })
+        # Clube
+        p_club = data.get("club_path")
+        if p_club and Path(p_club).exists():
+            badges_info.append({
+                "path": str(Path(p_club).resolve()),
+                "w": 48,
+                "h": 48
+            })
+
+        if badges_info:
+            total_badge_w = sum(b["w"] for b in badges_info) + badge_gap_final * (len(badges_info) - 1)
+            badge_start_x = (CARD_W - total_badge_w) // 2
             
-            for j, bp in enumerate(badge_paths):
+            current_x = badge_start_x
+            for b in badges_info:
                 try:
-                    badge_img = Image.open(bp).convert("RGBA")
-                    badge_img = badge_img.resize((badge_size_final, badge_size_final), Image.Resampling.LANCZOS)
-                    bx = badge_start_x + j * (badge_size_final + badge_gap_final)
-                    full_card.alpha_composite(badge_img, (bx, badge_y))
+                    badge_img = Image.open(b["path"]).convert("RGBA")
+                    badge_img = badge_img.resize((b["w"], b["h"]), Image.Resampling.LANCZOS)
+                    # Centralizar verticalmente na linha zona_badges_final (902px)
+                    by = zona_badges_final - b["h"] // 2
+                    full_card.alpha_composite(badge_img, (current_x, by))
+                    current_x += b["w"] + badge_gap_final
                 except Exception as e:
                     logger.debug(f"Erro ao colar badge de alta qualidade no full_card: {e}")
         full_card.save(full_path, format="PNG", optimize=True)
         
-        # Small (recorte inteligente)
-        top_crop = full_card.crop((0, 0, 504, 302))
-        bottom_crop = full_card.crop((0, 558, 504, 698))
+        # Small (recorte inteligente de alta qualidade a partir do canvas 756 x 1056 px)
+        top_crop = full_card.crop((0, 0, CARD_W, 457))
+        bottom_crop = full_card.crop((0, 844, CARD_W, CARD_H))
         
-        mini_canvas = Image.new("RGBA", (504, 442), (0, 0, 0, 0))
+        mini_canvas = Image.new("RGBA", (CARD_W, 457 + (CARD_H - 844)), (0, 0, 0, 0))
         mini_canvas.paste(top_crop, (0, 0))
-        mini_canvas.paste(bottom_crop, (0, 302))
+        mini_canvas.paste(bottom_crop, (0, 457))
         
         small_card = mini_canvas.resize((150, 169), Image.Resampling.LANCZOS)
         small_card.save(small_path, format="PNG", optimize=True)

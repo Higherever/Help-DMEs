@@ -253,7 +253,7 @@ def is_player_complete(futbin_id: str, name: str) -> bool:
 
     if not card_full.exists() or card_full.stat().st_size < 1000:
         return False
-    if not card_small.exists() or card_small.stat().st_size < 200:
+    if not card_small.exists() or card_small.stat().st_size < 100:
         return False
 
     # Camada 2: Banco SQLite
@@ -261,16 +261,25 @@ def is_player_complete(futbin_id: str, name: str) -> bool:
     cur = conn.cursor()
     try:
         cur.execute(
-            "SELECT detail_scraped_at, card_template_url, acceleration FROM fc_players WHERE futbin_id = ?",
+            "SELECT detail_scraped_at, card_template_url, acceleration, nation_flag_url, club_logo_url, league_logo_url, league FROM fc_players WHERE futbin_id = ?",
             (str(futbin_id),)
         )
         row = cur.fetchone()
         if not row:
             return False
 
-        detail_scraped, card_url, accel = row
+        detail_scraped, card_url, accel, nation_flag, club_logo, league_logo, league = row
         # Jogador completo = detalhes raspados + card salvo + sub-atributos preenchidos
         if not detail_scraped or not card_url or accel is None:
+            return False
+
+        # Verificar se as bandeiras/logos obrigatórios existem e são caminhos locais (/images/)
+        # Se for Icons, a liga é "Icons" e não possui league_logo_url no card
+        if not nation_flag or nation_flag.startswith("http"):
+            return False
+        if not club_logo or club_logo.startswith("http"):
+            return False
+        if league and str(league).lower() != "icons" and (not league_logo or league_logo.startswith("http")):
             return False
 
         return True
@@ -386,7 +395,7 @@ def upsert_player_sqlite(player_data: dict) -> bool:
             "gk_reflexes":      player_data.get("gk_reflexes"),
             # Auditoria
             "scraped_version":  SCRAPER_VERSION,
-            "detail_scraped_at": datetime.now(UTC).isoformat() if player_data.get("pace") else None,
+            "detail_scraped_at": datetime.now(UTC).isoformat() if (player_data.get("pace") or player_data.get("gk_diving")) else None,
         }
 
         if not row:
@@ -571,6 +580,7 @@ async def scrape_futbin_player_detail(
     player_url: str,
     futbin_id: str,
     card_type: str = "",
+    position: str = "",
 ) -> Dict:
     """Raspa detalhes completos de um jogador no Futbin."""
     if not player_url:
@@ -622,17 +632,24 @@ async def scrape_futbin_player_detail(
 
     # ── 6 Face Stats ──
     try:
-        stat_map = {
-            "PAC": "pace", "SHO": "shooting", "PAS": "passing",
-            "DRI": "dribbling_stat", "DEF": "defending", "PHY": "physic"
-        }
+        is_gk = "GK" in str(position).upper()
+        if is_gk:
+            stat_map = {
+                "DIV": "gk_diving", "HAN": "gk_handling", "KIC": "gk_kicking",
+                "REF": "gk_reflexes", "SPD": "pace", "POS": "gk_positioning"
+            }
+        else:
+            stat_map = {
+                "PAC": "pace", "SHO": "shooting", "PAS": "passing",
+                "DRI": "dribbling_stat", "DEF": "defending", "PHY": "physic"
+            }
         for stat_div in soup.select(".playercard-26-stats, .playercard-s-26-stats, .playercard-stats"):
             val_el = stat_div.select_one(".playercard-26-stat-number, .playercard-s-26-stat-value, .playercard-stat-number")
             lbl_el = stat_div.select_one(".playercard-26-stat-value, .playercard-s-26-stat-label, .playercard-stat-value")
             if val_el and lbl_el:
                 lbl = lbl_el.get_text(strip=True).upper()
                 col = stat_map.get(lbl)
-                if col:
+                if col and col not in data:
                     val = safe_int(val_el.get_text(strip=True))
                     if val and 1 <= val <= 99:
                         data[col] = val
@@ -641,13 +658,15 @@ async def scrape_futbin_player_detail(
 
     # ── Sub-atributos ──
     try:
+        is_gk = "GK" in str(position).upper()
         sub_map = {
             "Acceleration": "acceleration", "Accel": "acceleration",
             "Sprint Speed": "sprint_speed", "Sprint Spd": "sprint_speed",
             "Finishing": "finishing", "Shot Power": "shot_power", "Shot Pwr": "shot_power",
             "Long Shots": "long_shots", "Long Shot": "long_shots",
             "Volleys": "volleys",
-            "Positioning": "positioning_att", "Att. Position": "positioning_att",
+            "Positioning": "gk_positioning" if is_gk else "positioning_att",
+            "Att. Position": "positioning_att",
             "Att Position": "positioning_att", "Att.Position": "positioning_att",
             "Penalties": "penalties", "Penalty": "penalties",
             "Short Passing": "short_passing", "Short Pass": "short_passing",
@@ -674,6 +693,9 @@ async def scrape_futbin_player_detail(
             "GK Diving": "gk_diving", "GK Handling": "gk_handling",
             "GK Kicking": "gk_kicking", "GK Positioning": "gk_positioning",
             "GK Reflexes": "gk_reflexes",
+            "Diving": "gk_diving", "Handling": "gk_handling",
+            "Kicking": "gk_kicking", "Reflexes": "gk_reflexes",
+            "Speed": "pace",
         }
         for stat_row in soup.select(".player-stat-row"):
             name_el = stat_row.select_one(".player-stat-name")
@@ -789,15 +811,24 @@ async def scrape_futbin_player_detail(
 
     # ── Emblemas (URLs) ──
     try:
-        nation_img = soup.select_one("img[src*='/nation/'], img[src*='nations/'], img[src*='nation_flags/'], img[src*='/flags/']")
+        nation_img = (
+            soup.select_one("img.nation") or
+            soup.select_one("img[src*='/nation/'], img[src*='nations/'], img[src*='nation_flags/'], img[src*='/flags/']")
+        )
         if nation_img:
             data["nation_flag_url"] = nation_img.get("src", "")
 
-        club_img = soup.select_one("img[src*='/clubs/']")
+        club_img = (
+            soup.select_one("img.playercard-26-club") or
+            soup.select_one("img[src*='/clubs/'], img[src*='/club/']")
+        )
         if club_img:
             data["club_logo_url"] = club_img.get("src", "")
 
-        league_img = soup.select_one("img[src*='/leagues/']")
+        league_img = (
+            soup.select_one("img.playercard-26-league") or
+            soup.select_one("img[src*='/leagues/'], img[src*='/league/']")
+        )
         if league_img:
             data["league_logo_url"] = league_img.get("src", "")
     except Exception:
@@ -883,7 +914,7 @@ async def download_binary_file(
     if not url:
         return False
 
-    if dest_path.exists() and dest_path.stat().st_size > 200:
+    if dest_path.exists() and dest_path.stat().st_size > 100:
         return True
 
     clean_url = url if "futbin.com" in url else (url.split("?")[0] if "?" in url else url)
@@ -893,7 +924,7 @@ async def download_binary_file(
     async with IMG_SEM:
         data = await fetch_binary(session, clean_url)
 
-    if data and len(data) > 200:
+    if data and len(data) > 100:
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         async with aiofiles.open(dest_path, "wb") as f:
             await f.write(data)
@@ -956,6 +987,10 @@ async def download_and_process_images(
 
     # 4. Bandeira da Nação
     nation_url = player_data.get("nation_flag_url")
+    if nation_url:
+        if "nation_unknown" in str(nation_url):
+            nation_url = None
+            
     if nation_url:
         nation_slug = sanitize(player_data.get("nation", "unknown"))
         nation_filename = f"nation_{nation_slug}.png"
@@ -1065,6 +1100,29 @@ async def process_single_player(
     F5: Pós-processamento
     Persistência no banco
     """
+    # Recuperar dados básicos faltantes do banco de dados (evita perdas em buscas de colunas parciais)
+    db_path = PROJECT_ROOT / "database" / "help_dmes.db"
+    if not db_path.exists():
+        db_path = PROJECT_ROOT / "help_dmes.db"
+        
+    if db_path.exists():
+        try:
+            import sqlite3
+            conn = sqlite3.connect(str(db_path))
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("SELECT nation, club, league, position, ea_id FROM fc_players WHERE futbin_id = ?", (str(player_basic["futbin_id"]),))
+            db_row = cursor.fetchone()
+            if db_row:
+                for col in ["nation", "club", "league", "position"]:
+                    if not player_basic.get(col) and db_row[col]:
+                        player_basic[col] = db_row[col]
+                if not player_basic.get("ea_item_id") and db_row["ea_id"]:
+                    player_basic["ea_item_id"] = db_row["ea_id"]
+            conn.close()
+        except Exception as e:
+            logger.debug(f"Erro ao recuperar dados básicos adicionais do banco: {e}")
+
     futbin_id = player_basic["futbin_id"]
     name = player_basic["name"]
     overall = player_basic["overall"]
@@ -1075,7 +1133,7 @@ async def process_single_player(
 
     # F2 + F3 em paralelo
     tasks = [
-        scrape_futbin_player_detail(session_futbin, player_url, futbin_id, card_type=player_basic.get("card_type", "")),
+        scrape_futbin_player_detail(session_futbin, player_url, futbin_id, card_type=player_basic.get("card_type", ""), position=player_basic.get("position", "")),
         scrape_futgg_card_image(session_futgg, name, ea_item_id),
     ]
     results = await asyncio.gather(*tasks, return_exceptions=True)

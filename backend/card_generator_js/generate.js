@@ -223,53 +223,32 @@ app.post('/generate', async (req, res) => {
     }
 
     // Camada 12: Badges na Base (Centralizados na Horizontal)
-    // Bandeira do País, Logo da Liga e Logo do Clube lado a lado no rodapé
+    // Bandeira do País, Logo da Liga e Escudo do Clube lado a lado no rodapé
     const badgesToDraw = [];
+    const badgeCenterY = 1822; // Centro vertical comum (equivalente a 902px * 2)
+    const badgeH = 96;
+    const badgeW = 96;
+    const nationW = 144;
+    const nationH = 96;
+    const badgeGap = 32;
+
     if (p.nation_path && fs.existsSync(p.nation_path)) {
-      badgesToDraw.push({ path: p.nation_path, isNation: true });
+      badgesToDraw.push({ path: p.nation_path, w: nationW, h: nationH });
     }
     if (p.league_path && fs.existsSync(p.league_path)) {
-      badgesToDraw.push({ path: p.league_path, isNation: false });
+      badgesToDraw.push({ path: p.league_path, w: badgeW, h: badgeH });
     }
     if (p.club_path && fs.existsSync(p.club_path)) {
-      badgesToDraw.push({ path: p.club_path, isNation: false });
+      badgesToDraw.push({ path: p.club_path, w: badgeW, h: badgeH });
     }
 
-    const badgeCenterY = 1775;
-    const badgeW = 95;
-    const badgeH = 95;
-    const nationW = 120; // Bandeira da nação é retangular
-    const nationH = 80;
-
-    if (badgesToDraw.length === 3) {
-      const xPositions = [520, 711, 902];
-      for (let i = 0; i < 3; i++) {
-        const b = badgesToDraw[i];
-        const x = xPositions[i];
-        if (b.isNation) {
-          await tryDrawImage(ctx3x, b.path, x, badgeCenterY + 7, nationW, nationH);
-        } else {
-          await tryDrawImage(ctx3x, b.path, x + 12, badgeCenterY, badgeW, badgeH);
-        }
-      }
-    } else if (badgesToDraw.length === 2) {
-      const xPositions = [606, 806];
-      for (let i = 0; i < 2; i++) {
-        const b = badgesToDraw[i];
-        const x = xPositions[i];
-        if (b.isNation) {
-          await tryDrawImage(ctx3x, b.path, x, badgeCenterY + 7, nationW, nationH);
-        } else {
-          await tryDrawImage(ctx3x, b.path, x + 12, badgeCenterY, badgeW, badgeH);
-        }
-      }
-    } else if (badgesToDraw.length === 1) {
-      const b = badgesToDraw[0];
-      const x = 706;
-      if (b.isNation) {
-        await tryDrawImage(ctx3x, b.path, x, badgeCenterY + 7, nationW, nationH);
-      } else {
-        await tryDrawImage(ctx3x, b.path, x + 12, badgeCenterY, badgeW, badgeH);
+    if (badgesToDraw.length > 0) {
+      const totalWidth = badgesToDraw.reduce((acc, b) => acc + b.w, 0) + badgeGap * (badgesToDraw.length - 1);
+      let currentX = (1512 - totalWidth) / 2;
+      for (const b of badgesToDraw) {
+        const by = badgeCenterY - b.h / 2;
+        await tryDrawImage(ctx3x, b.path, currentX, by, b.w, b.h);
+        currentX += b.w + badgeGap;
       }
     }
 

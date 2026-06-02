@@ -52,7 +52,7 @@ class AssetDownloader:
         if not url:
             return False
             
-        if dest_path.exists() and dest_path.stat().st_size > 200:
+        if dest_path.exists() and dest_path.stat().st_size > 100:
             return True
             
         clean_url = url
@@ -70,7 +70,7 @@ class AssetDownloader:
             else:
                 data = await fetch_binary(session, clean_url)
                 
-            if data and len(data) > 200:
+            if data and len(data) > 100:
                 async with aiofiles.open(dest_path, "wb") as f:
                     await f.write(data)
                 logger.debug(f"[AssetDownloader] Imagem baixada em cache: {dest_path.name}")
@@ -86,7 +86,7 @@ class AssetDownloader:
         if not url:
             return False
             
-        if dest_path.exists() and dest_path.stat().st_size > 200:
+        if dest_path.exists() and dest_path.stat().st_size > 100:
             return True
             
         clean_url = url
@@ -106,7 +106,7 @@ class AssetDownloader:
             with urllib.request.urlopen(req, timeout=8) as response:
                 data = response.read()
                 
-            if data and len(data) > 200:
+            if data and len(data) > 100:
                 with open(dest_path, "wb") as f:
                     f.write(data)
                 logger.debug(f"[AssetDownloader] [Sync] Imagem baixada em cache: {dest_path.name}")

@@ -152,7 +152,11 @@ def _meets_requirement(player: UserSquadPlayer, req: ChallengeRequirement, rarit
         return (req.detail and req.detail.lower() in player.league.lower())
         
     if req.requirement_type == "players_from_nation":
-        return (req.detail and req.detail.lower() in player.nation.lower())
+        if not req.detail:
+            return False
+        from backend.services.translation_service import translate_nation_pt_to_en
+        req_nation_en = translate_nation_pt_to_en(req.detail)
+        return req_nation_en.lower() in player.nation.lower()
         
     if req.requirement_type == "players_from_club":
         return (req.detail and req.detail.lower() in player.team.lower())

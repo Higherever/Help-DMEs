@@ -97,6 +97,7 @@ async def import_csv(session: AsyncSession, file_content: bytes) -> dict:
 
     # Carregar mapeamento de posições PT -> EN para cruzamento robusto
     from backend.models.models import PositionMapping, FCPlayer, PlayerCard
+    from backend.services.translation_service import translate_nation_pt_to_en
     pos_mapping_res = await session.execute(select(PositionMapping))
     pos_map = {row.pt.upper(): row.en.upper() for row in pos_mapping_res.scalars().all()}
 
@@ -110,30 +111,45 @@ async def import_csv(session: AsyncSession, file_content: bytes) -> dict:
             pref_pos_pt = row["Preferred Position"].strip().upper()
             pref_pos_en = pos_map.get(pref_pos_pt, pref_pos_pt)
             cleaned_name = row["Name"].strip()
+            
+            raw_nation = row["Nation"].strip()
+            nation_en = translate_nation_pt_to_en(raw_nation)
 
             # Buscar playstyles no catálogo global (fc_players) ou player_cards (fallback)
             playstyles_json = None
 
-            # 1. Tentar busca por nome exato e rating exato e posição compatível em fc_players
+            # 1. Tentar busca por nome exato, rating exato, nacionalidade exata e posição compatível em fc_players
             fc_q = select(FCPlayer.playstyles_json).where(
                 FCPlayer.overall == rating_val,
                 FCPlayer.position.ilike(f"%{pref_pos_en}%"),
+                FCPlayer.nation.ilike(f"%{nation_en}%"),
                 func.lower(FCPlayer.name) == cleaned_name.lower()
             )
             fc_res = await session.execute(fc_q)
             playstyles_json = fc_res.scalars().first()
 
-            # 2. Tentar busca em player_cards por nome exato e rating exato e posição compatível (fallback 1)
+            # 2. Tentar busca em player_cards por nome exato, rating exato, nacionalidade exata e posição compatível (fallback 1)
             if not playstyles_json:
                 pc_q = select(PlayerCard.playstyles_json).where(
                     PlayerCard.overall == rating_val,
                     PlayerCard.position.ilike(f"%{pref_pos_en}%"),
+                    PlayerCard.country.ilike(f"%{nation_en}%"),
                     func.lower(PlayerCard.name) == cleaned_name.lower()
                 )
                 pc_res = await session.execute(pc_q)
                 playstyles_json = pc_res.scalars().first()
 
-            # 3. Tentar busca flexível (contendo nome) e posição compatível em fc_players (fallback 2)
+            # 3. Tentar busca em fc_players sem o filtro de nacionalidade (fallback 2)
+            if not playstyles_json:
+                fc_q_no_nat = select(FCPlayer.playstyles_json).where(
+                    FCPlayer.overall == rating_val,
+                    FCPlayer.position.ilike(f"%{pref_pos_en}%"),
+                    func.lower(FCPlayer.name) == cleaned_name.lower()
+                )
+                fc_res_no_nat = await session.execute(fc_q_no_nat)
+                playstyles_json = fc_res_no_nat.scalars().first()
+
+            # 4. Tentar busca flexível (contendo nome) e posição compatível em fc_players (fallback 3)
             if not playstyles_json:
                 fc_q_flex = select(FCPlayer.playstyles_json).where(
                     FCPlayer.overall == rating_val,
@@ -144,7 +160,7 @@ async def import_csv(session: AsyncSession, file_content: bytes) -> dict:
                 fc_res_flex = await session.execute(fc_q_flex)
                 playstyles_json = fc_res_flex.scalars().first()
 
-            # 4. Fallback absoluto: Buscar apenas por Nome + Rating (ignorando posição, caso haja divergência de escalação no CSV)
+            # 5. Fallback absoluto: Buscar apenas por Nome + Rating (ignorando posição, caso haja divergência de escalação no CSV)
             if not playstyles_json:
                 fc_q_abs = select(FCPlayer.playstyles_json).where(
                     FCPlayer.overall == rating_val,
@@ -160,7 +176,7 @@ async def import_csv(session: AsyncSession, file_content: bytes) -> dict:
                 rating=rating_val,
                 rarity=row["Rarity"].strip(),
                 preferred_position=row["Preferred Position"].strip(),
-                nation=row["Nation"].strip(),
+                nation=nation_en,  # Salva a nacionalidade normalizada em inglês
                 league=row["League"].strip(),
                 team=row["Team"].strip(),
                 price_min=price_min,

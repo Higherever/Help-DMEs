@@ -76,7 +76,7 @@ async def ensure_asset_local(
     if not url:
         return None
         
-    if dest_path.exists() and dest_path.stat().st_size > 200:
+    if dest_path.exists() and dest_path.stat().st_size > 100:
         return str(dest_path.resolve())
         
     # Limpar URL (preservando query string/assinatura para o Futbin para evitar sig_invalid)
@@ -92,7 +92,7 @@ async def ensure_asset_local(
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         # Usar o bypass do fetch_binary que injeta cabeçalhos e referer corretos
         data = await fetch_binary(session, clean_url)
-        if data and len(data) > 200:
+        if data and len(data) > 100:
             async with aiofiles.open(dest_path, "wb") as f:
                 await f.write(data)
             logger.debug(f"[Renderer Cache] Baixou asset com sucesso para: {dest_path.name}")
@@ -175,6 +175,11 @@ class CardRendererClient:
         # Nação/Bandeira
         nation_url = player_data.get("nation_flag_url") or player_data.get("nation_url")
         nation_slug = sanitize_slug(player_data.get("nation", "unknown"))
+        
+        # Se a bandeira for "nation_unknown" mas a nação é conhecida, descartamos a URL genérica para usar o slug no fallback
+        if nation_url and "nation_unknown" in str(nation_url) and nation_slug != "unknown":
+            nation_url = None
+            
         nation_path = IMAGES_DIR / "cards" / "nations" / f"nation_{nation_slug}.png"
         nation_local = await ensure_asset_local(session, nation_url, nation_path)
         
@@ -196,16 +201,29 @@ class CardRendererClient:
 
         # 3. Formatar Estatísticas
         stats_input = player_data.get("stats") or []
-        # Se as estatísticas vierem como chaves puras em player_data (ex: pace, shooting)
-        if not stats_input and "pace" in player_data:
-            stats_input = [
-                {"name": "PAC", "value": player_data.get("pace") or 0},
-                {"name": "SHO", "value": player_data.get("shooting") or 0},
-                {"name": "PAS", "value": player_data.get("passing") or 0},
-                {"name": "DRI", "value": player_data.get("dribbling_stat") or player_data.get("dribbling") or 0},
-                {"name": "DEF", "value": player_data.get("defending") or 0},
-                {"name": "PHY", "value": player_data.get("physic") or player_data.get("physical") or 0},
-            ]
+        raw_position = player_data.get("position", "ST")
+        is_gk = "GK" in str(raw_position).upper() if raw_position else False
+
+        # Se as estatísticas vierem como chaves puras em player_data (ex: pace, shooting, gk_diving)
+        if not stats_input:
+            if is_gk:
+                stats_input = [
+                    {"name": "DIV", "value": player_data.get("gk_diving") or player_data.get("diving") or 0},
+                    {"name": "HAN", "value": player_data.get("gk_handling") or player_data.get("handling") or 0},
+                    {"name": "KIC", "value": player_data.get("gk_kicking") or player_data.get("kicking") or 0},
+                    {"name": "REF", "value": player_data.get("gk_reflexes") or player_data.get("reflexes") or 0},
+                    {"name": "SPD", "value": player_data.get("pace") or player_data.get("speed") or player_data.get("gk_speed") or 0},
+                    {"name": "POS", "value": player_data.get("gk_positioning") or player_data.get("positioning") or 0},
+                ]
+            elif "pace" in player_data:
+                stats_input = [
+                    {"name": "PAC", "value": player_data.get("pace") or 0},
+                    {"name": "SHO", "value": player_data.get("shooting") or 0},
+                    {"name": "PAS", "value": player_data.get("passing") or 0},
+                    {"name": "DRI", "value": player_data.get("dribbling_stat") or player_data.get("dribbling") or 0},
+                    {"name": "DEF", "value": player_data.get("defending") or 0},
+                    {"name": "PHY", "value": player_data.get("physic") or player_data.get("physical") or 0},
+                ]
 
         # 4. Formatar Playstyles
         playstyles_input = player_data.get("playstyles") or []
