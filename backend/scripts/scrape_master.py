@@ -450,35 +450,25 @@ def is_player_complete(futbin_id: str, name: str) -> bool:
     """
     Verifica em 3 camadas se o jogador já está completamente processado:
       1. Banco SQLite — detail_scraped_at e card_template_url preenchidos
-      2. Disco — imagem full e small existem com tamanho aceitável
+      2. Disco — imagens de assets individuais (face/render/portrait, template de fundo, clube, nação, liga) existem
     Retorna True = pode ser pulado.
     """
     name_slug = sanitize(name)
-    card_filename = f"fc_player_{futbin_id}_{name_slug}.png"
-
-    # Camada 3: Disco
-    card_full = IMAGES_DIR / "cards" / "full" / card_filename
-    card_small = IMAGES_DIR / "cards" / "small" / card_filename
-
-    if not card_full.exists() or card_full.stat().st_size < 1000:
-        return False
-    if not card_small.exists() or card_small.stat().st_size < 100:
-        return False
 
     # Camada 2: Banco SQLite
     conn = sqlite3.connect(str(DATABASE_FILE))
     cur = conn.cursor()
     try:
         cur.execute(
-            "SELECT detail_scraped_at, card_template_url, acceleration, nation_flag_url, club_logo_url, league_logo_url, league, playstyles_json FROM fc_players WHERE futbin_id = ?",
+            "SELECT detail_scraped_at, card_template_url, bg_url_raw, acceleration, nation, nation_flag_url, club, club_logo_url, league, league_logo_url, playstyles_json, card_type FROM fc_players WHERE futbin_id = ?",
             (str(futbin_id),)
         )
         row = cur.fetchone()
         if not row:
             return False
 
-        detail_scraped, card_url, accel, nation_flag, club_logo, league_logo, league, playstyles_json = row
-        # Jogador completo = detalhes raspados + card salvo + sub-atributos preenchidos
+        detail_scraped, card_url, bg_url_raw, accel, nation, nation_flag, club, club_logo, league, league_logo, playstyles_json, card_type = row
+        # Jogador completo = detalhes raspados + card_template_url salvo + sub-atributos preenchidos
         if not detail_scraped or not card_url or accel is None:
             return False
 
@@ -486,14 +476,59 @@ def is_player_complete(futbin_id: str, name: str) -> bool:
         if not playstyles_are_current(playstyles_json):
             return False
 
-        # Verificar se as bandeiras/logos obrigatórios existem e são caminhos locais (/images/)
-        # Se for Icons, a liga é "Icons" e não possui league_logo_url no card
-        if not nation_flag or nation_flag.startswith("http"):
+        # Camada 3: Disco - Verificar assets individuais
+        # 1. Face (render ou portrait dependendo do tipo de card)
+        card_type_lower = (card_type or "").lower()
+        is_base_card = card_type_lower in BASE_CARD_TYPES
+        
+        face_found = False
+        if is_base_card:
+            portrait_path = IMAGES_DIR / "cards" / "portraits" / f"portrait_{futbin_id}_{name_slug}.png"
+            if portrait_path.exists() and portrait_path.stat().st_size > 100:
+                face_found = True
+            else:
+                render_path = IMAGES_DIR / "cards" / "renders" / f"render_{futbin_id}_{name_slug}.png"
+                if render_path.exists() and render_path.stat().st_size > 100:
+                    face_found = True
+        else:
+            render_path = IMAGES_DIR / "cards" / "renders" / f"render_{futbin_id}_{name_slug}.png"
+            if render_path.exists() and render_path.stat().st_size > 100:
+                face_found = True
+            else:
+                portrait_path = IMAGES_DIR / "cards" / "portraits" / f"portrait_{futbin_id}_{name_slug}.png"
+                if portrait_path.exists() and portrait_path.stat().st_size > 100:
+                    face_found = True
+
+        if not face_found:
             return False
-        if not club_logo or club_logo.startswith("http"):
-            return False
-        if league and str(league).lower() != "icons" and (not league_logo or league_logo.startswith("http")):
-            return False
+
+        # 2. Fundo (Template de card)
+        if bg_url_raw:
+            bg_dyn_filename = bg_url_raw.split("/")[-1].split("?")[0]
+            template_path = IMAGES_DIR / "cards" / "templates" / f"dyn_{bg_dyn_filename}"
+            if not template_path.exists() or template_path.stat().st_size < 100:
+                return False
+
+        # 3. Clube
+        if club and club_logo:
+            club_slug = sanitize(club)
+            club_path = IMAGES_DIR / "cards" / "clubs" / f"club_{club_slug}.png"
+            if not club_path.exists() or club_path.stat().st_size < 100:
+                return False
+
+        # 4. Nação
+        if nation and nation_flag and "nation_unknown" not in str(nation_flag):
+            nation_slug = sanitize(nation)
+            nation_path = IMAGES_DIR / "cards" / "nations" / f"nation_{nation_slug}.png"
+            if not nation_path.exists() or nation_path.stat().st_size < 100:
+                return False
+
+        # 5. Liga
+        if league and str(league).lower() != "icons" and league_logo:
+            league_slug = sanitize(league)
+            league_path = IMAGES_DIR / "cards" / "leagues" / f"league_{league_slug}.png"
+            if not league_path.exists() or league_path.stat().st_size < 100:
+                return False
 
         return True
     except Exception:
@@ -1146,28 +1181,21 @@ async def download_and_process_images(
     paths = {}
     name_slug = sanitize(player_data.get("name", "unknown"))
 
-    # 1. Card Completo HD
-    card_url = (
-        player_data.get("futgg_card_image_url") or
-        player_data.get("bg_url_hd") or
-        player_data.get("bg_url_raw")
-    )
-    if card_url:
-        card_filename = f"fc_player_{futbin_id}_{name_slug}.png"
-        card_path = IMAGES_DIR / "cards" / "full" / card_filename
+    # 1. Fundo (Template de card)
+    bg_url = player_data.get("bg_url_hd") or player_data.get("bg_url_raw")
+    bg_url_raw = player_data.get("bg_url_raw") or bg_url
+    if bg_url and bg_url_raw:
+        bg_dyn_filename = bg_url_raw.split("/")[-1].split("?")[0]
+        template_path = IMAGES_DIR / "cards" / "templates" / f"dyn_{bg_dyn_filename}"
 
-        if await download_binary_file(session, card_url, card_path):
-            # FASE 5: Pós-processamento — remover fundo branco
-            await remove_white_background(card_path)
+        if await download_binary_file(session, bg_url, template_path):
+            # FASE 5: Pós-processamento — remover fundo branco do template
+            await remove_white_background(template_path)
 
-            paths["card_template_url"] = f"/images/cards/full/{card_filename}"
-            paths["bg_url_hd"] = f"/images/cards/full/{card_filename}"
+            paths["card_template_url"] = f"/images/cards/templates/dyn_{bg_dyn_filename}"
+            paths["bg_url_hd"] = f"/images/cards/templates/dyn_{bg_dyn_filename}"
 
-            # Gerar miniatura cropada premium
-            small_path = IMAGES_DIR / "cards" / "small" / card_filename
-            create_premium_thumbnail(str(card_path), str(small_path))
-
-    # 2. Render/Face
+    # 2. Render/Face (para cards especiais/renders)
     render_url = (
         player_data.get("futgg_render_url") or
         player_data.get("render_url") or
@@ -1179,6 +1207,17 @@ async def download_and_process_images(
         if await download_binary_file(session, render_url, render_path):
             paths["render_url"] = f"/images/cards/renders/{render_filename}"
             paths["face_url"] = f"/images/cards/renders/{render_filename}"
+
+    # 2.1 Portrait (para cards base/portraits)
+    portrait_url = player_data.get("portrait_url")
+    if portrait_url:
+        portrait_filename = f"portrait_{futbin_id}_{name_slug}.png"
+        portrait_path = IMAGES_DIR / "cards" / "portraits" / portrait_filename
+        if await download_binary_file(session, portrait_url, portrait_path):
+            paths["portrait_url"] = f"/images/cards/portraits/{portrait_filename}"
+            card_type_lower = (player_data.get("card_type") or "").lower()
+            if card_type_lower in BASE_CARD_TYPES:
+                paths["face_url"] = f"/images/cards/portraits/{portrait_filename}"
 
     # 3. Escudo do Clube
     club_url = player_data.get("club_logo_url")

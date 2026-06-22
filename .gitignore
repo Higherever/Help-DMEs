@@ -128,3 +128,12 @@ database/playstyles_prata_bronze.json
 .DS_Store
 Thumbs.db
 backend/scripts/scrape_master_state.json
+
+# ===========================
+# Local Debug/Temporary files
+# ===========================
+modric_26.html
+modric_real.html
+progress.html
+parse_profile.py
+

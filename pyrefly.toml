@@ -1,0 +1,3 @@
+python-interpreter-path = "backend/.venv/bin/python"
+preset = "off"
+disable-type-errors-in-ide = true

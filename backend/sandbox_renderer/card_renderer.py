@@ -9,7 +9,7 @@ import unicodedata
 import colorsys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-import aiohttp
+import aiohttp  # pyrefly: ignore
 import aiofiles
 from PIL import Image, ImageDraw, ImageFont, ImageColor, ImageFilter, ImageOps, ImageChops
 
@@ -687,7 +687,7 @@ def remove_background_photo(image_path: Path) -> Image.Image:
             return img
             
     try:
-        from rembg import remove
+        from rembg import remove  # pyrefly: ignore
         logger.debug("Usando rembg (IA) para remoção de fundo da foto.")
         return remove(img)
     except Exception as e:
@@ -931,7 +931,7 @@ class CardRendererClient:
                 if player_url:
                     logger.info(f"[Renderer] Tentando obter template HD na web para: {name} (URL: {player_url})")
                     try:
-                        from bs4 import BeautifulSoup
+                        from bs4 import BeautifulSoup  # pyrefly: ignore
                         from backend.services.anti_bot import fetch_html
                         html = await fetch_html(session, player_url)
                         if html:
